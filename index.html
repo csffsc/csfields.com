@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chris Fields</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garant:ital,wght@0,300;0,400;1,300&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ink: #e8e4dc;
+      --ink-muted: #6b6760;
+      --ink-faint: #7a7670;
+      --paper: #141210;
+      --accent: #5c7a4a;
+    }
+
+    html, body {
+      height: 100%;
+    }
+
+    body {
+      background: var(--paper);
+      color: var(--ink);
+      font-family: 'DM Mono', monospace;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    .card {
+      text-align: center;
+      max-width: 480px;
+      width: 100%;
+      opacity: 0;
+      transform: translateY(12px);
+      animation: arrive 1s cubic-bezier(0.22, 1, 0.36, 1) 0.2s forwards;
+    }
+
+    @keyframes arrive {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .name {
+      font-family: 'Cormorant Garant', serif;
+      font-weight: 300;
+      font-size: clamp(3rem, 10vw, 5.5rem);
+      letter-spacing: -0.02em;
+      line-height: 1;
+      color: var(--ink);
+    }
+
+    .name em {
+      font-style: italic;
+      color: var(--accent);
+    }
+
+    .rule {
+      width: 2rem;
+      height: 1px;
+      background: var(--ink-faint);
+      margin: 2rem auto;
+    }
+
+    .bio {
+      font-size: 0.7rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--ink-muted);
+      line-height: 1.8;
+    }
+
+    .contact {
+      margin-top: 2rem;
+    }
+
+    .contact a {
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: lowercase;
+      color: var(--ink-faint);
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+      transition: color 0.2s, border-color 0.2s;
+    }
+
+    .contact a:hover {
+      color: var(--ink);
+      border-bottom-color: var(--ink-faint);
+    }
+
+
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1 class="name">Chris <em>Fields</em></h1>
+    <div class="rule"></div>
+    <p class="bio">Engineer by trade &nbsp;&middot;&nbsp; Curious by nature</p>
+    <p class="bio" style="margin-top: 0.5rem;">Carlisle, MA</p>
+    <div class="contact">
+      <a href="mailto:chris@csfields.com">chris@csfields.com</a>
+    </div>
+  </div>
+</body>
+</html>
