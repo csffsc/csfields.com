@@ -27,16 +27,18 @@
       color: var(--ink);
       font-family: 'DM Mono', monospace;
       display: flex;
-      align-items: center;
-      justify-content: center;
+      flex-direction: column;
       min-height: 100vh;
-      padding: 2rem;
     }
 
     .card {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       text-align: center;
-      max-width: 480px;
-      width: 100%;
+      padding: 2rem;
       opacity: 0;
       transform: translateY(12px);
       animation: arrive 1s cubic-bezier(0.22, 1, 0.36, 1) 0.2s forwards;
@@ -94,7 +96,11 @@
       border-bottom-color: var(--ink-faint);
     }
 
-
+    .treeline {
+      width: 100%;
+      display: block;
+      flex-shrink: 0;
+    }
   </style>
 </head>
 <body>
@@ -107,5 +113,58 @@
       <a href="mailto:chris@csfields.com">chris@csfields.com</a>
     </div>
   </div>
+
+  <svg class="treeline" viewBox="0 0 680 130" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+    <defs>
+      <linearGradient id="sidefade" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%"   stop-color="#141210" stop-opacity="1"/>
+        <stop offset="15%"  stop-color="#141210" stop-opacity="0"/>
+        <stop offset="85%"  stop-color="#141210" stop-opacity="0"/>
+        <stop offset="100%" stop-color="#141210" stop-opacity="1"/>
+      </linearGradient>
+    </defs>
+
+    <line x1="0" y1="98" x2="680" y2="98" stroke="#2a2824" stroke-width="0.5"/>
+
+    <polygon points="4,98   18,48  32,98"  fill="#2d3e28"/>
+    <polygon points="20,98  36,32  52,98"  fill="#3d5c3a"/>
+    <polygon points="40,98  54,42  68,98"  fill="#2d3e28"/>
+    <polygon points="56,98  72,28  88,98"  fill="#4a6639"/>
+    <polygon points="76,98  90,38 104,98"  fill="#3d5c3a"/>
+    <polygon points="92,98 108,24 124,98"  fill="#2d3e28"/>
+    <polygon points="112,98 126,34 140,98" fill="#5c7a4a"/>
+    <polygon points="128,98 144,20 160,98" fill="#3d5c3a"/>
+    <polygon points="148,98 162,30 176,98" fill="#2d3e28"/>
+    <polygon points="164,98 180,16 196,98" fill="#4a6639"/>
+    <polygon points="184,98 198,26 212,98" fill="#3d5c3a"/>
+    <polygon points="200,98 216,12 232,98" fill="#5c7a4a"/>
+    <polygon points="220,98 234,22 248,98" fill="#2d3e28"/>
+    <polygon points="236,98 252,10 268,98" fill="#3d5c3a"/>
+    <polygon points="256,98 270,18 284,98" fill="#4a6639"/>
+    <polygon points="272,98 288,8  304,98" fill="#2d3e28"/>
+    <polygon points="292,98 306,14 320,98" fill="#5c7a4a"/>
+    <polygon points="308,98 324,8  340,98" fill="#3d5c3a"/>
+    <polygon points="328,98 342,12 356,98" fill="#2d3e28"/>
+    <polygon points="344,98 360,8  376,98" fill="#4a6639"/>
+    <polygon points="364,98 378,14 392,98" fill="#3d5c3a"/>
+    <polygon points="380,98 396,10 412,98" fill="#5c7a4a"/>
+    <polygon points="400,98 414,18 428,98" fill="#2d3e28"/>
+    <polygon points="416,98 432,12 448,98" fill="#3d5c3a"/>
+    <polygon points="436,98 450,20 464,98" fill="#4a6639"/>
+    <polygon points="452,98 468,14 484,98" fill="#2d3e28"/>
+    <polygon points="472,98 486,22 500,98" fill="#5c7a4a"/>
+    <polygon points="488,98 504,16 520,98" fill="#3d5c3a"/>
+    <polygon points="508,98 522,26 536,98" fill="#2d3e28"/>
+    <polygon points="524,98 540,12 556,98" fill="#4a6639"/>
+    <polygon points="544,98 558,30 572,98" fill="#3d5c3a"/>
+    <polygon points="560,98 576,20 592,98" fill="#2d3e28"/>
+    <polygon points="580,98 594,34 608,98" fill="#5c7a4a"/>
+    <polygon points="596,98 612,24 628,98" fill="#3d5c3a"/>
+    <polygon points="616,98 630,38 644,98" fill="#2d3e28"/>
+    <polygon points="632,98 648,28 664,98" fill="#4a6639"/>
+    <polygon points="652,98 666,44 680,98" fill="#3d5c3a"/>
+
+    <rect x="0" y="0" width="680" height="130" fill="url(#sidefade)"/>
+  </svg>
 </body>
 </html>
