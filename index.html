@@ -114,6 +114,21 @@
       opacity: 0;
       animation: arrive 1.4s cubic-bezier(0.22, 1, 0.36, 1) 0s forwards;
     }
+
+    body {
+      transition: background-color 2s ease;
+    }
+
+    [data-time="morning"] .galaxy,
+    [data-time="afternoon"] .galaxy {
+      animation: none;
+      opacity: 0;
+    }
+
+    [data-time="dusk"] .galaxy {
+      animation: none;
+      opacity: 0.45;
+    }
   </style>
   <script>
     (function () {
