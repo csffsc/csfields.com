@@ -115,15 +115,50 @@
       animation: arrive 1.4s cubic-bezier(0.22, 1, 0.36, 1) 0s forwards;
     }
   </style>
+  <script>
+    (function () {
+      var palettes = {
+        predawn:   { paper: '#0b0e18', ink: '#c4d0e8', muted: '#525e78', faint: '#6470a0', accent: '#5080a8' },
+        morning:   { paper: '#7a3e14', ink: '#fef6e8', muted: '#d49050', faint: '#e8a860', accent: '#f0c050' },
+        afternoon: { paper: '#1e4870', ink: '#e8f4ff', muted: '#7aaad8', faint: '#9ac0e8', accent: '#b0d8f8' },
+        dusk:      { paper: '#0e0810', ink: '#f0d8e8', muted: '#7a5870', faint: '#9870a0', accent: '#c87050' },
+        night:     { paper: '#141210', ink: '#e8e4dc', muted: '#6b6760', faint: '#7a7670', accent: '#5c7a4a' }
+      };
+
+      function slot(h) {
+        if (h >= 5  && h < 7)  return 'predawn';
+        if (h >= 7  && h < 11) return 'morning';
+        if (h >= 11 && h < 17) return 'afternoon';
+        if (h >= 17 && h < 21) return 'dusk';
+        return 'night';
+      }
+
+      function apply() {
+        var h = new Date().getHours();
+        var name = slot(h);
+        var p = palettes[name];
+        var r = document.documentElement;
+        r.style.setProperty('--paper',     p.paper);
+        r.style.setProperty('--ink',       p.ink);
+        r.style.setProperty('--ink-muted', p.muted);
+        r.style.setProperty('--ink-faint', p.faint);
+        r.style.setProperty('--accent',    p.accent);
+        r.setAttribute('data-time', name);
+      }
+
+      apply();
+      setInterval(apply, 60000);
+    })();
+  </script>
 </head>
 <body>
   <svg class="galaxy" viewBox="0 0 1200 200" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" aria-hidden="true">
     <defs>
       <linearGradient id="mw-fade" x1="0" y1="0" x2="0" y2="200" gradientUnits="userSpaceOnUse">
-        <stop offset="0%"   stop-color="#141210" stop-opacity="1"/>
-        <stop offset="18%"  stop-color="#141210" stop-opacity="0"/>
-        <stop offset="82%"  stop-color="#141210" stop-opacity="0"/>
-        <stop offset="100%" stop-color="#141210" stop-opacity="1"/>
+        <stop offset="0%"   style="stop-color:var(--paper)" stop-opacity="1"/>
+        <stop offset="18%"  style="stop-color:var(--paper)" stop-opacity="0"/>
+        <stop offset="82%"  style="stop-color:var(--paper)" stop-opacity="0"/>
+        <stop offset="100%" style="stop-color:var(--paper)" stop-opacity="1"/>
       </linearGradient>
       <linearGradient id="mw-band-v" x1="0" y1="0" x2="0" y2="200" gradientUnits="userSpaceOnUse">
         <stop offset="0%"   stop-color="#c8a870" stop-opacity="0"/>
@@ -242,10 +277,10 @@
   <svg class="treeline" viewBox="0 0 680 130" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
     <defs>
       <linearGradient id="sidefade" x1="0" y1="0" x2="1" y2="0">
-        <stop offset="0%"   stop-color="#141210" stop-opacity="1"/>
-        <stop offset="15%"  stop-color="#141210" stop-opacity="0"/>
-        <stop offset="85%"  stop-color="#141210" stop-opacity="0"/>
-        <stop offset="100%" stop-color="#141210" stop-opacity="1"/>
+        <stop offset="0%"   style="stop-color:var(--paper)" stop-opacity="1"/>
+        <stop offset="15%"  style="stop-color:var(--paper)" stop-opacity="0"/>
+        <stop offset="85%"  style="stop-color:var(--paper)" stop-opacity="0"/>
+        <stop offset="100%" style="stop-color:var(--paper)" stop-opacity="1"/>
       </linearGradient>
     </defs>
 
