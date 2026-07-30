@@ -16,6 +16,10 @@
       --ink-faint: #7a7670;
       --paper: #141210;
       --accent: #5c7a4a;
+      --tree-1: #2d3e28;
+      --tree-2: #3d5c3a;
+      --tree-3: #4a6639;
+      --tree-4: #5c7a4a;
     }
 
     @property --paper     { syntax: '<color>'; inherits: true; initial-value: #141210; }
@@ -23,10 +27,15 @@
     @property --ink-muted { syntax: '<color>'; inherits: true; initial-value: #6b6760; }
     @property --ink-faint { syntax: '<color>'; inherits: true; initial-value: #7a7670; }
     @property --accent    { syntax: '<color>'; inherits: true; initial-value: #5c7a4a; }
+    @property --tree-1    { syntax: '<color>'; inherits: true; initial-value: #2d3e28; }
+    @property --tree-2    { syntax: '<color>'; inherits: true; initial-value: #3d5c3a; }
+    @property --tree-3    { syntax: '<color>'; inherits: true; initial-value: #4a6639; }
+    @property --tree-4    { syntax: '<color>'; inherits: true; initial-value: #5c7a4a; }
 
     html {
       transition: --paper 2s ease, --ink 2s ease, --ink-muted 2s ease,
-                  --ink-faint 2s ease, --accent 2s ease;
+                  --ink-faint 2s ease, --accent 2s ease,
+                  --tree-1 2s ease, --tree-2 2s ease, --tree-3 2s ease, --tree-4 2s ease;
     }
 
     html, body {
@@ -118,6 +127,11 @@
       flex-shrink: 0;
     }
 
+    .t1 { fill: var(--tree-1); }
+    .t2 { fill: var(--tree-2); }
+    .t3 { fill: var(--tree-3); }
+    .t4 { fill: var(--tree-4); }
+
     .galaxy {
       width: 100%;
       display: block;
@@ -140,11 +154,11 @@
   <script>
     (function () {
       var palettes = {
-        predawn:   { paper: '#0b0e18', ink: '#c4d0e8', muted: '#525e78', faint: '#6470a0', accent: '#5080a8' },
-        morning:   { paper: '#7a3e14', ink: '#fef6e8', muted: '#d49050', faint: '#e8a860', accent: '#f0c050' },
-        afternoon: { paper: '#1e4870', ink: '#e8f4ff', muted: '#7aaad8', faint: '#9ac0e8', accent: '#b0d8f8' },
-        dusk:      { paper: '#0e0810', ink: '#f0d8e8', muted: '#7a5870', faint: '#9870a0', accent: '#c87050' },
-        night:     { paper: '#141210', ink: '#e8e4dc', muted: '#6b6760', faint: '#7a7670', accent: '#5c7a4a' }
+        predawn:   { paper: '#0b0e18', ink: '#c4d0e8', muted: '#525e78', faint: '#6470a0', accent: '#5080a8', tree1: '#1a2830', tree2: '#243840', tree3: '#2e4850', tree4: '#3a6070' },
+        morning:   { paper: '#7a3e14', ink: '#fef6e8', muted: '#d49050', faint: '#e8a860', accent: '#f0c050', tree1: '#3a5020', tree2: '#5a7030', tree3: '#7a9040', tree4: '#9ab050' },
+        afternoon: { paper: '#1e4870', ink: '#e8f4ff', muted: '#7aaad8', faint: '#9ac0e8', accent: '#b0d8f8', tree1: '#1e4030', tree2: '#2e6040', tree3: '#3e8050', tree4: '#4ea060' },
+        dusk:      { paper: '#0e0810', ink: '#f0d8e8', muted: '#7a5870', faint: '#9870a0', accent: '#c87050', tree1: '#2a1e28', tree2: '#3a2838', tree3: '#4a3040', tree4: '#5a3848' },
+        night:     { paper: '#141210', ink: '#e8e4dc', muted: '#6b6760', faint: '#7a7670', accent: '#5c7a4a', tree1: '#2d3e28', tree2: '#3d5c3a', tree3: '#4a6639', tree4: '#5c7a4a' }
       };
 
       function slot(h) {
@@ -165,6 +179,10 @@
         r.style.setProperty('--ink-muted', p.muted);
         r.style.setProperty('--ink-faint', p.faint);
         r.style.setProperty('--accent',    p.accent);
+        r.style.setProperty('--tree-1',    p.tree1);
+        r.style.setProperty('--tree-2',    p.tree2);
+        r.style.setProperty('--tree-3',    p.tree3);
+        r.style.setProperty('--tree-4',    p.tree4);
         r.setAttribute('data-time', name);
       }
 
@@ -308,43 +326,43 @@
 
     <line x1="0" y1="98" x2="680" y2="98" stroke="#2a2824" stroke-width="0.5"/>
 
-    <polygon points="4,98   18,48  32,98"  fill="#2d3e28"/>
-    <polygon points="20,98  36,32  52,98"  fill="#3d5c3a"/>
-    <polygon points="40,98  54,42  68,98"  fill="#2d3e28"/>
-    <polygon points="56,98  72,28  88,98"  fill="#4a6639"/>
-    <polygon points="76,98  90,38 104,98"  fill="#3d5c3a"/>
-    <polygon points="92,98 108,24 124,98"  fill="#2d3e28"/>
-    <polygon points="112,98 126,34 140,98" fill="#5c7a4a"/>
-    <polygon points="128,98 144,20 160,98" fill="#3d5c3a"/>
-    <polygon points="148,98 162,30 176,98" fill="#2d3e28"/>
-    <polygon points="164,98 180,16 196,98" fill="#4a6639"/>
-    <polygon points="184,98 198,26 212,98" fill="#3d5c3a"/>
-    <polygon points="200,98 216,12 232,98" fill="#5c7a4a"/>
-    <polygon points="220,98 234,22 248,98" fill="#2d3e28"/>
-    <polygon points="236,98 252,10 268,98" fill="#3d5c3a"/>
-    <polygon points="256,98 270,18 284,98" fill="#4a6639"/>
-    <polygon points="272,98 288,8  304,98" fill="#2d3e28"/>
-    <polygon points="292,98 306,14 320,98" fill="#5c7a4a"/>
-    <polygon points="308,98 324,8  340,98" fill="#3d5c3a"/>
-    <polygon points="328,98 342,12 356,98" fill="#2d3e28"/>
-    <polygon points="344,98 360,8  376,98" fill="#4a6639"/>
-    <polygon points="364,98 378,14 392,98" fill="#3d5c3a"/>
-    <polygon points="380,98 396,10 412,98" fill="#5c7a4a"/>
-    <polygon points="400,98 414,18 428,98" fill="#2d3e28"/>
-    <polygon points="416,98 432,12 448,98" fill="#3d5c3a"/>
-    <polygon points="436,98 450,20 464,98" fill="#4a6639"/>
-    <polygon points="452,98 468,14 484,98" fill="#2d3e28"/>
-    <polygon points="472,98 486,22 500,98" fill="#5c7a4a"/>
-    <polygon points="488,98 504,16 520,98" fill="#3d5c3a"/>
-    <polygon points="508,98 522,26 536,98" fill="#2d3e28"/>
-    <polygon points="524,98 540,12 556,98" fill="#4a6639"/>
-    <polygon points="544,98 558,30 572,98" fill="#3d5c3a"/>
-    <polygon points="560,98 576,20 592,98" fill="#2d3e28"/>
-    <polygon points="580,98 594,34 608,98" fill="#5c7a4a"/>
-    <polygon points="596,98 612,24 628,98" fill="#3d5c3a"/>
-    <polygon points="616,98 630,38 644,98" fill="#2d3e28"/>
-    <polygon points="632,98 648,28 664,98" fill="#4a6639"/>
-    <polygon points="652,98 666,44 680,98" fill="#3d5c3a"/>
+    <polygon points="4,98   18,48  32,98"  class="t1"/>
+    <polygon points="20,98  36,32  52,98"  class="t2"/>
+    <polygon points="40,98  54,42  68,98"  class="t1"/>
+    <polygon points="56,98  72,28  88,98"  class="t3"/>
+    <polygon points="76,98  90,38 104,98"  class="t2"/>
+    <polygon points="92,98 108,24 124,98"  class="t1"/>
+    <polygon points="112,98 126,34 140,98" class="t4"/>
+    <polygon points="128,98 144,20 160,98" class="t2"/>
+    <polygon points="148,98 162,30 176,98" class="t1"/>
+    <polygon points="164,98 180,16 196,98" class="t3"/>
+    <polygon points="184,98 198,26 212,98" class="t2"/>
+    <polygon points="200,98 216,12 232,98" class="t4"/>
+    <polygon points="220,98 234,22 248,98" class="t1"/>
+    <polygon points="236,98 252,10 268,98" class="t2"/>
+    <polygon points="256,98 270,18 284,98" class="t3"/>
+    <polygon points="272,98 288,8  304,98" class="t1"/>
+    <polygon points="292,98 306,14 320,98" class="t4"/>
+    <polygon points="308,98 324,8  340,98" class="t2"/>
+    <polygon points="328,98 342,12 356,98" class="t1"/>
+    <polygon points="344,98 360,8  376,98" class="t3"/>
+    <polygon points="364,98 378,14 392,98" class="t2"/>
+    <polygon points="380,98 396,10 412,98" class="t4"/>
+    <polygon points="400,98 414,18 428,98" class="t1"/>
+    <polygon points="416,98 432,12 448,98" class="t2"/>
+    <polygon points="436,98 450,20 464,98" class="t3"/>
+    <polygon points="452,98 468,14 484,98" class="t1"/>
+    <polygon points="472,98 486,22 500,98" class="t4"/>
+    <polygon points="488,98 504,16 520,98" class="t2"/>
+    <polygon points="508,98 522,26 536,98" class="t1"/>
+    <polygon points="524,98 540,12 556,98" class="t3"/>
+    <polygon points="544,98 558,30 572,98" class="t2"/>
+    <polygon points="560,98 576,20 592,98" class="t1"/>
+    <polygon points="580,98 594,34 608,98" class="t4"/>
+    <polygon points="596,98 612,24 628,98" class="t2"/>
+    <polygon points="616,98 630,38 644,98" class="t1"/>
+    <polygon points="632,98 648,28 664,98" class="t3"/>
+    <polygon points="652,98 666,44 680,98" class="t2"/>
 
     <rect x="0" y="0" width="680" height="130" fill="url(#sidefade)"/>
   </svg>
