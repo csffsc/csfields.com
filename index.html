@@ -68,6 +68,10 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
+    .name, .bio {
+      transition: color 2s ease;
+    }
+
     .name {
       font-family: 'Cormorant Garant', serif;
       font-weight: 300;
@@ -87,6 +91,7 @@
       height: 1px;
       background: var(--ink-faint);
       margin: 2rem auto;
+      transition: background-color 2s ease;
     }
 
     .bio {
@@ -113,12 +118,13 @@
       color: var(--ink-faint);
       text-decoration: none;
       border-bottom: 1px solid transparent;
-      transition: color 0.2s, border-color 0.2s;
+      transition: color 2s ease, border-color 2s ease;
     }
 
     .contact a:hover {
       color: var(--ink);
       border-bottom-color: var(--ink-faint);
+      transition-duration: 0.2s;
     }
 
     .treeline {
@@ -127,10 +133,12 @@
       flex-shrink: 0;
     }
 
-    .t1 { fill: var(--tree-1); }
-    .t2 { fill: var(--tree-2); }
-    .t3 { fill: var(--tree-3); }
-    .t4 { fill: var(--tree-4); }
+    .t1 { fill: var(--tree-1); transition: fill 2s ease; }
+    .t2 { fill: var(--tree-2); transition: fill 2s ease; }
+    .t3 { fill: var(--tree-3); transition: fill 2s ease; }
+    .t4 { fill: var(--tree-4); transition: fill 2s ease; }
+
+    stop { transition: stop-color 2s ease; }
 
     .galaxy {
       width: 100%;
