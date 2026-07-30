@@ -18,6 +18,17 @@
       --accent: #5c7a4a;
     }
 
+    @property --paper     { syntax: '<color>'; inherits: true; initial-value: #141210; }
+    @property --ink       { syntax: '<color>'; inherits: true; initial-value: #e8e4dc; }
+    @property --ink-muted { syntax: '<color>'; inherits: true; initial-value: #6b6760; }
+    @property --ink-faint { syntax: '<color>'; inherits: true; initial-value: #7a7670; }
+    @property --accent    { syntax: '<color>'; inherits: true; initial-value: #5c7a4a; }
+
+    html {
+      transition: --paper 2s ease, --ink 2s ease, --ink-muted 2s ease,
+                  --ink-faint 2s ease, --accent 2s ease;
+    }
+
     html, body {
       height: 100%;
     }
@@ -113,10 +124,6 @@
       flex-shrink: 0;
       opacity: 0;
       animation: arrive 1.4s cubic-bezier(0.22, 1, 0.36, 1) 0s forwards;
-    }
-
-    body {
-      transition: background-color 2s ease;
     }
 
     [data-time="morning"] .galaxy,
