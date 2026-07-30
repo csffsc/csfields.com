@@ -382,8 +382,6 @@
   <script>
     (function () {
       var mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-      if (mq.matches) return;
-
       var svg = document.querySelector('.treeline');
       if (!svg) return;
 
@@ -404,6 +402,7 @@
       var rect = null;
       var raf = 0;
       var idle = 0;
+      var active = false;
 
       function cacheRect() {
         rect = svg.getBoundingClientRect();
@@ -486,6 +485,8 @@
       }
 
       function teardown() {
+        if (!active) return;
+        active = false;
         if (raf) cancelAnimationFrame(raf);
         raf = 0;
         clearTransforms();
@@ -493,6 +494,8 @@
       }
 
       function start() {
+        if (active) return;
+        active = true;
         focusX = CENTER;
         targetX = CENTER;
         idle = 0;
@@ -506,8 +509,9 @@
         else start();
       }
 
-      mq.addEventListener('change', onMqChange);
-      start();
+      if (mq.addEventListener) mq.addEventListener('change', onMqChange);
+      else if (mq.addListener) mq.addListener(onMqChange);
+      if (!mq.matches) start();
     })();
   </script>
 </body>
