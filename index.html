@@ -164,9 +164,9 @@
       opacity: 0.45;
     }
 
-    .s1 { fill: #ffffff; }
-    .s2 { fill: #cce8ff; }
-    .s3 { fill: #fff8e0; }
+    .galaxy .s1 { fill: #ffffff; }
+    .galaxy .s2 { fill: #cce8ff; }
+    .galaxy .s3 { fill: #fff8e0; }
   </style>
   <script>
     (function () {
@@ -457,6 +457,10 @@
         kick();
       }
 
+      function onPointerLeave() {
+        setViewportTarget();
+      }
+
       function onVis() {
         if (document.hidden) {
           if (raf) cancelAnimationFrame(raf);
@@ -476,6 +480,7 @@
 
       function attach() {
         svg.addEventListener('pointermove', onPointer, { passive: true });
+        svg.addEventListener('pointerleave', onPointerLeave, { passive: true });
         window.addEventListener('scroll', onLayout, { passive: true });
         window.addEventListener('resize', onLayout, { passive: true });
         document.addEventListener('visibilitychange', onVis);
@@ -483,6 +488,7 @@
 
       function detach() {
         svg.removeEventListener('pointermove', onPointer);
+        svg.removeEventListener('pointerleave', onPointerLeave);
         window.removeEventListener('scroll', onLayout);
         window.removeEventListener('resize', onLayout);
         document.removeEventListener('visibilitychange', onVis);
