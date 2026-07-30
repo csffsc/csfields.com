@@ -381,22 +381,26 @@
   </svg>
   <script>
     (function () {
-      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      var mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+      if (mq.matches) return;
 
       var svg = document.querySelector('.treeline');
       if (!svg) return;
 
+      var CENTER = 340;
       var polys = svg.querySelectorAll('polygon');
       var centers = [];
+      var scales = [];
       var i;
       for (i = 0; i < polys.length; i++) {
         var bb = polys[i].getBBox();
         centers.push(bb.x + bb.width / 2);
+        scales.push(1);
       }
 
       var radius = 120;
-      var focusX = 340;
-      var targetX = 340;
+      var focusX = CENTER;
+      var targetX = CENTER;
       var rect = null;
       var raf = 0;
       var idle = 0;
@@ -406,7 +410,7 @@
       }
 
       function clientToSvg(cx) {
-        if (!rect || !rect.width) return 340;
+        if (!rect || !rect.width) return CENTER;
         return ((cx - rect.left) / rect.width) * 680;
       }
 
@@ -420,12 +424,21 @@
         kick();
       }
 
+      function onLayout() {
+        cacheRect();
+        setViewportTarget();
+      }
+
       function tick() {
         focusX += (targetX - focusX) * 0.08;
         for (i = 0; i < polys.length; i++) {
           var d = Math.abs(focusX - centers[i]);
           var bump = Math.max(0, 1 - d / radius);
-          polys[i].style.transform = 'scaleY(' + (1 + bump * 0.08) + ')';
+          var scale = 1 + bump * 0.08;
+          if (scale !== scales[i]) {
+            scales[i] = scale;
+            polys[i].style.transform = 'scaleY(' + scale + ')';
+          }
         }
         if (Math.abs(targetX - focusX) < 0.05) {
           idle++;
@@ -441,16 +454,6 @@
         kick();
       }
 
-      function onScroll() {
-        cacheRect();
-        setViewportTarget();
-      }
-
-      function onResize() {
-        cacheRect();
-        setViewportTarget();
-      }
-
       function onVis() {
         if (document.hidden) {
           if (raf) cancelAnimationFrame(raf);
@@ -461,12 +464,50 @@
         }
       }
 
-      cacheRect();
-      setViewportTarget();
-      svg.addEventListener('pointermove', onPointer, { passive: true });
-      window.addEventListener('scroll', onScroll, { passive: true });
-      window.addEventListener('resize', onResize, { passive: true });
-      document.addEventListener('visibilitychange', onVis);
+      function clearTransforms() {
+        for (i = 0; i < polys.length; i++) {
+          polys[i].style.transform = '';
+          scales[i] = 1;
+        }
+      }
+
+      function attach() {
+        svg.addEventListener('pointermove', onPointer, { passive: true });
+        window.addEventListener('scroll', onLayout, { passive: true });
+        window.addEventListener('resize', onLayout, { passive: true });
+        document.addEventListener('visibilitychange', onVis);
+      }
+
+      function detach() {
+        svg.removeEventListener('pointermove', onPointer);
+        window.removeEventListener('scroll', onLayout);
+        window.removeEventListener('resize', onLayout);
+        document.removeEventListener('visibilitychange', onVis);
+      }
+
+      function teardown() {
+        if (raf) cancelAnimationFrame(raf);
+        raf = 0;
+        clearTransforms();
+        detach();
+      }
+
+      function start() {
+        focusX = CENTER;
+        targetX = CENTER;
+        idle = 0;
+        cacheRect();
+        setViewportTarget();
+        attach();
+      }
+
+      function onMqChange() {
+        if (mq.matches) teardown();
+        else start();
+      }
+
+      mq.addEventListener('change', onMqChange);
+      start();
     })();
   </script>
 </body>
