@@ -133,6 +133,11 @@
       flex-shrink: 0;
     }
 
+    .treeline polygon {
+      transform-box: fill-box;
+      transform-origin: center bottom;
+    }
+
     .t1 { fill: var(--tree-1); transition: fill 2s ease; }
     .t2 { fill: var(--tree-2); transition: fill 2s ease; }
     .t3 { fill: var(--tree-3); transition: fill 2s ease; }
@@ -374,5 +379,95 @@
 
     <rect x="0" y="0" width="680" height="130" fill="url(#sidefade)"/>
   </svg>
+  <script>
+    (function () {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+      var svg = document.querySelector('.treeline');
+      if (!svg) return;
+
+      var polys = svg.querySelectorAll('polygon');
+      var centers = [];
+      var i;
+      for (i = 0; i < polys.length; i++) {
+        var bb = polys[i].getBBox();
+        centers.push(bb.x + bb.width / 2);
+      }
+
+      var radius = 120;
+      var focusX = 340;
+      var targetX = 340;
+      var rect = null;
+      var raf = 0;
+      var idle = 0;
+
+      function cacheRect() {
+        rect = svg.getBoundingClientRect();
+      }
+
+      function clientToSvg(cx) {
+        if (!rect || !rect.width) return 340;
+        return ((cx - rect.left) / rect.width) * 680;
+      }
+
+      function kick() {
+        idle = 0;
+        if (!raf) raf = requestAnimationFrame(tick);
+      }
+
+      function setViewportTarget() {
+        targetX = clientToSvg(window.innerWidth / 2);
+        kick();
+      }
+
+      function tick() {
+        focusX += (targetX - focusX) * 0.08;
+        for (i = 0; i < polys.length; i++) {
+          var d = Math.abs(focusX - centers[i]);
+          var bump = Math.max(0, 1 - d / radius);
+          polys[i].style.transform = 'scaleY(' + (1 + bump * 0.08) + ')';
+        }
+        if (Math.abs(targetX - focusX) < 0.05) {
+          idle++;
+          if (idle > 30) { raf = 0; return; }
+        } else {
+          idle = 0;
+        }
+        raf = requestAnimationFrame(tick);
+      }
+
+      function onPointer(e) {
+        targetX = clientToSvg(e.clientX);
+        kick();
+      }
+
+      function onScroll() {
+        cacheRect();
+        setViewportTarget();
+      }
+
+      function onResize() {
+        cacheRect();
+        setViewportTarget();
+      }
+
+      function onVis() {
+        if (document.hidden) {
+          if (raf) cancelAnimationFrame(raf);
+          raf = 0;
+        } else {
+          cacheRect();
+          setViewportTarget();
+        }
+      }
+
+      cacheRect();
+      setViewportTarget();
+      svg.addEventListener('pointermove', onPointer, { passive: true });
+      window.addEventListener('scroll', onScroll, { passive: true });
+      window.addEventListener('resize', onResize, { passive: true });
+      document.addEventListener('visibilitychange', onVis);
+    })();
+  </script>
 </body>
 </html>
