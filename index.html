@@ -59,13 +59,15 @@
       justify-content: center;
       text-align: center;
       padding: 2rem;
-      opacity: 0;
-      transform: translateY(12px);
-      animation: arrive 1s cubic-bezier(0.22, 1, 0.36, 1) 0.2s forwards;
+      /* Settled styles are the cascade defaults so the arrive animation can end
+         without fill:forwards — avoids a permanent composited layer that makes
+         Safari keep stale text bitmaps when .bio opacity is animated. */
+      animation: arrive 1s cubic-bezier(0.22, 1, 0.36, 1) 0.2s backwards;
     }
 
     @keyframes arrive {
-      to { opacity: 1; transform: translateY(0); }
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
 
     .name, .bio {
@@ -560,8 +562,24 @@
       var current = Math.floor(Math.random() * phrases.length);
       var swapping = false;
 
+      function bind() {
+        bio.addEventListener('click', roll);
+      }
+
       function render() {
         bio.textContent = phrases[current];
+      }
+
+      // Safari keeps a composited bitmap of the old text when opacity is animated
+      // on a node whose textContent then changes (worse inside .card's permanent
+      // arrive-animation layer). Replacing the node destroys that bitmap.
+      function replaceBio(opacity) {
+        var next = bio.cloneNode(false);
+        next.textContent = phrases[current];
+        if (opacity != null) next.style.opacity = opacity;
+        bio.parentNode.replaceChild(next, bio);
+        bio = next;
+        bind();
       }
 
       function roll() {
@@ -572,35 +590,34 @@
         } while (next === current);
         current = next;
         if (mq.matches || !bio.animate) {
-          render();
+          replaceBio(null);
           return;
         }
-        // WAAPI rather than a CSS opacity transition: the text swaps only after
-        // the fade-out fully completes on the compositor, and canceling at the
-        // end detaches the layer so WebKit can't keep a stale raster of the old text.
         swapping = true;
-        var fadeOut = bio.animate(
+        var outgoing = bio;
+        var fadeOut = outgoing.animate(
           [{ opacity: 1 }, { opacity: 0 }],
           { duration: 200, easing: 'ease', fill: 'forwards' }
         );
         fadeOut.finished.then(function () {
-          render();
+          replaceBio('0');
           var fadeIn = bio.animate(
             [{ opacity: 0 }, { opacity: 1 }],
-            { duration: 300, easing: 'ease', fill: 'both' }
+            { duration: 300, easing: 'ease', fill: 'forwards' }
           );
-          fadeOut.cancel();
-          return fadeIn.finished;
-        }).then(function (anim) {
-          anim.cancel();
-          swapping = false;
+          return fadeIn.finished.then(function () {
+            if (fadeIn.commitStyles) fadeIn.commitStyles();
+            fadeIn.cancel();
+            bio.style.opacity = '';
+            swapping = false;
+          });
         }).catch(function () {
           swapping = false;
         });
       }
 
       render();
-      bio.addEventListener('click', roll);
+      bind();
     })();
   </script>
 </body>
