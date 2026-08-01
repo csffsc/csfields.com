@@ -27,6 +27,7 @@ async function readRequestBody(request) {
 
 export default {
   async fetch(request, env, ctx) {
+    const ts = new Date().toISOString();
     let status = null;
     let bodyText = null;
     let bodyLen = null;
@@ -52,7 +53,7 @@ export default {
 
     const visitPromise = (async () => {
       try {
-        const visit = await extractVisit(request, { status, bodyText, bodyLen });
+        const visit = await extractVisit(request, { status, bodyText, bodyLen, ts });
         await persistVisit(env, visit);
       } catch (err) {
         console.log(

@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { extractVisit, guessBot } from './extract.js';
+import { extractVisit, guessBot, guessBotVisit } from './extract.js';
+
+const BROWSER_UA =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15';
 
 function fakeRequest({
   url = 'https://csfields.com/path?x=1',
@@ -30,11 +33,34 @@ describe('guessBot', () => {
   });
 
   it('leaves normal browsers as 0', () => {
-    expect(
-      guessBot(
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15'
-      )
-    ).toBe(0);
+    expect(guessBot(BROWSER_UA)).toBe(0);
+  });
+
+  it('flags missing/empty UA as bot', () => {
+    expect(guessBot('')).toBe(1);
+    expect(guessBot(null)).toBe(1);
+  });
+});
+
+describe('guessBotVisit', () => {
+  it('flags spoofed browser UA on /wp-login.php', () => {
+    expect(guessBotVisit(BROWSER_UA, '/wp-login.php', 404)).toBe(1);
+  });
+
+  it('flags .php path with browser UA', () => {
+    expect(guessBotVisit(BROWSER_UA, '/waso.php', 200)).toBe(1);
+  });
+
+  it('flags 404 on random path with browser UA', () => {
+    expect(guessBotVisit(BROWSER_UA, '/no-such-page', 404)).toBe(1);
+  });
+
+  it('does not flag favicon.ico 404 with browser UA', () => {
+    expect(guessBotVisit(BROWSER_UA, '/favicon.ico', 404)).toBe(0);
+  });
+
+  it('does not flag normal browser on / with 200', () => {
+    expect(guessBotVisit(BROWSER_UA, '/', 200)).toBe(0);
   });
 });
 
@@ -102,5 +128,63 @@ describe('extractVisit', () => {
     });
     expect(visit.body).toBeNull();
     expect(visit.body_len).toBe(9000);
+  });
+
+  it('flags spoofed browser UA probing /wp-login.php as bot', async () => {
+    const req = fakeRequest({
+      url: 'https://csfields.com/wp-login.php',
+      headers: { 'User-Agent': BROWSER_UA },
+    });
+    const visit = await extractVisit(req, { status: 404, bodyText: null, bodyLen: null });
+    expect(visit.bot_guess).toBe(1);
+  });
+
+  it('sets verified_bot null when botManagement is absent', async () => {
+    const req = fakeRequest({
+      url: 'https://csfields.com/',
+      headers: { 'User-Agent': BROWSER_UA },
+      cf: { country: 'US' },
+    });
+    const visit = await extractVisit(req, { status: 200, bodyText: null, bodyLen: null });
+    expect(visit.verified_bot).toBeNull();
+    expect(visit.bot_score).toBeNull();
+    expect(visit.bot_guess).toBe(0);
+  });
+
+  it('sets verified_bot 1 when Cloudflare reports verifiedBot true', async () => {
+    const req = fakeRequest({
+      url: 'https://csfields.com/',
+      headers: { 'User-Agent': 'Googlebot/2.1' },
+      cf: { botManagement: { score: 1, verifiedBot: true } },
+    });
+    const visit = await extractVisit(req, { status: 200, bodyText: null, bodyLen: null });
+    expect(visit.verified_bot).toBe(1);
+  });
+
+  it('uses an explicitly supplied timestamp verbatim', async () => {
+    const req = fakeRequest();
+    const ts = '2024-06-15T12:34:56.789Z';
+    const visit = await extractVisit(req, {
+      status: 200,
+      bodyText: null,
+      bodyLen: null,
+      ts,
+    });
+    expect(visit.ts).toBe(ts);
+  });
+
+  it('falls back to a current ISO timestamp when none is supplied', async () => {
+    const req = fakeRequest();
+    const before = Date.now();
+    const visit = await extractVisit(req, {
+      status: 200,
+      bodyText: null,
+      bodyLen: null,
+    });
+    const after = Date.now();
+    expect(visit.ts).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    const parsed = Date.parse(visit.ts);
+    expect(parsed).toBeGreaterThanOrEqual(before);
+    expect(parsed).toBeLessThanOrEqual(after);
   });
 });
