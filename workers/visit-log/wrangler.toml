@@ -1,0 +1,22 @@
+name = "visit-log"
+main = "src/index.js"
+compatibility_date = "2026-08-01"
+workers_dev = false
+
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+[[d1_databases]]
+binding = "DB"
+database_name = "visit-log-db"
+database_id = "REPLACE_AFTER_CREATE"
+preview_database_id = "REPLACE_AFTER_CREATE"
+
+[[routes]]
+pattern = "csfields.com/*"
+zone_name = "csfields.com"
+
+[[routes]]
+pattern = "www.csfields.com/*"
+zone_name = "csfields.com"
