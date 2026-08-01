@@ -101,6 +101,9 @@
       text-transform: uppercase;
       color: var(--ink-muted);
       line-height: 1.8;
+      cursor: pointer;
+      user-select: none;
+      transition: color 2s ease, opacity 0.3s ease;
     }
 
     .contact {
@@ -522,6 +525,68 @@
       if (mq.addEventListener) mq.addEventListener('change', onMqChange);
       else if (mq.addListener) mq.addListener(onMqChange);
       if (!mq.matches) start();
+    })();
+  </script>
+  <script>
+    (function () {
+      var S = ' · '; // nbsp-middot-nbsp, matching the static fallback markup
+      var phrases = [
+        'Engineer by trade' + S + 'Curious by nature',
+        'Maker of things' + S + 'Breaker of builds',
+        'Systems thinker' + S + 'Star gazer',
+        'Root-cause analyst' + S + 'Occasional wanderer',
+        'Analytical by day' + S + 'Nocturnal by choice',
+        'Shipper of code' + S + 'Watcher of trees',
+        'Deterministic by design' + S + 'Delighted by surprise',
+        'Strong opinions' + S + 'Loosely coupled',
+        'Local maximum' + S + 'Global curiosity',
+        'Logs everything' + S + 'Regrets nothing',
+        'First principles' + S + 'Second breakfast',
+        'Half stack' + S + 'Full wonder',
+        'Well-tested' + S + 'Occasionally documented',
+        'Under the hood' + S + 'Over the hills',
+        'Planted in logic' + S + 'Reaching for light',
+        'Builds the map' + S + 'Walks the terrain',
+        'Daylight responsive' + S + 'Starlight native',
+        'Powered by coffee' + S + 'Debugged by walks',
+        'Not lost' + S + 'Just exploring',
+        'Outstanding in my field',
+        'Curiosity, engineered'
+      ];
+
+      var bio = document.querySelector('.bio');
+      if (!bio) return;
+
+      var mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+      var current = Math.floor(Math.random() * phrases.length);
+      var swapping = false;
+
+      function render() {
+        bio.textContent = phrases[current];
+      }
+
+      function roll() {
+        if (swapping) return;
+        var next;
+        do {
+          next = Math.floor(Math.random() * phrases.length);
+        } while (next === current);
+        current = next;
+        if (mq.matches) {
+          render();
+          return;
+        }
+        swapping = true;
+        bio.style.opacity = '0';
+        setTimeout(function () {
+          render();
+          bio.style.opacity = '1';
+          swapping = false;
+        }, 300);
+      }
+
+      render();
+      bio.addEventListener('click', roll);
     })();
   </script>
 </body>
