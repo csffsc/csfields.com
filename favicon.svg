@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="CF">
+  <style>
+    .bg { fill: #141210; }
+    .c { fill: #e8e4dc; }
+    .f { fill: #5c7a4a; }
+    @media (prefers-color-scheme: light) {
+      .bg { fill: #e8e4dc; }
+      .c { fill: #141210; }
+    }
+  </style>
+  <rect class="bg" width="32" height="32"/>
+  <text
+    class="c"
+    x="11"
+    y="22"
+    text-anchor="middle"
+    font-family="Georgia, 'Times New Roman', serif"
+    font-size="15"
+    font-weight="300"
+  >C</text>
+  <text
+    class="f"
+    x="21"
+    y="22"
+    text-anchor="middle"
+    font-family="Georgia, 'Times New Roman', serif"
+    font-size="15"
+    font-weight="300"
+    font-style="italic"
+  >F</text>
+</svg>
