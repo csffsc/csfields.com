@@ -13,8 +13,8 @@ crons = ["0 5 * * *"]
 [[d1_databases]]
 binding = "DB"
 database_name = "visit-log-db"
-database_id = "REPLACE_AFTER_CREATE"
-preview_database_id = "REPLACE_AFTER_CREATE"
+database_id = "59731293-bfb9-4f69-80a4-b320e333db0e"
+preview_database_id = "59731293-bfb9-4f69-80a4-b320e333db0e"
 
 [[routes]]
 pattern = "csfields.com/*"
