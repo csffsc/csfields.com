@@ -14,7 +14,7 @@ crons = ["0 5 * * *"]
 binding = "DB"
 database_name = "visit-log-db"
 database_id = "59731293-bfb9-4f69-80a4-b320e333db0e"
-preview_database_id = "59731293-bfb9-4f69-80a4-b320e333db0e"
+preview_database_id = "f96083e4-452c-4745-a7b9-23ebf00186b3"
 
 [[routes]]
 pattern = "csfields.com/*"
