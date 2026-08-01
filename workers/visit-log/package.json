@@ -1,0 +1,17 @@
+{
+  "name": "visit-log",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail",
+    "db:local": "wrangler d1 execute visit-log-db --local --file=./schema.sql",
+    "db:remote": "wrangler d1 execute visit-log-db --remote --file=./schema.sql"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4",
+    "wrangler": "^4.28.0"
+  }
+}
