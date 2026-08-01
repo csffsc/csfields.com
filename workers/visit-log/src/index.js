@@ -68,4 +68,12 @@ export default {
     ctx.waitUntil(visitPromise);
     return response;
   },
+
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(
+      env.DB.prepare(
+        "DELETE FROM visits WHERE ts < datetime('now', '-90 days')"
+      ).run()
+    );
+  },
 };
