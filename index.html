@@ -103,7 +103,6 @@
       line-height: 1.8;
       cursor: pointer;
       user-select: none;
-      transition: color 2s ease, opacity 0.3s ease;
     }
 
     .contact {
@@ -572,17 +571,32 @@
           next = Math.floor(Math.random() * phrases.length);
         } while (next === current);
         current = next;
-        if (mq.matches) {
+        if (mq.matches || !bio.animate) {
           render();
           return;
         }
+        // WAAPI rather than a CSS opacity transition: the text swaps only after
+        // the fade-out fully completes on the compositor, and canceling at the
+        // end detaches the layer so WebKit can't keep a stale raster of the old text.
         swapping = true;
-        bio.style.opacity = '0';
-        setTimeout(function () {
+        var fadeOut = bio.animate(
+          [{ opacity: 1 }, { opacity: 0 }],
+          { duration: 200, easing: 'ease', fill: 'forwards' }
+        );
+        fadeOut.finished.then(function () {
           render();
-          bio.style.opacity = '1';
+          var fadeIn = bio.animate(
+            [{ opacity: 0 }, { opacity: 1 }],
+            { duration: 300, easing: 'ease', fill: 'both' }
+          );
+          fadeOut.cancel();
+          return fadeIn.finished;
+        }).then(function (anim) {
+          anim.cancel();
           swapping = false;
-        }, 300);
+        }).catch(function () {
+          swapping = false;
+        });
       }
 
       render();
