@@ -150,28 +150,79 @@
 
     stop { transition: stop-color 2s ease; }
 
-    .galaxy {
+    .sky-detail {
       width: 100%;
       display: block;
       flex-shrink: 0;
+      pointer-events: none;
       opacity: 0;
       animation: arrive 1.4s cubic-bezier(0.22, 1, 0.36, 1) 0s forwards;
     }
 
-    [data-time="morning"] .galaxy,
-    [data-time="afternoon"] .galaxy {
-      animation: none;
+    .sky-scene {
       opacity: 0;
+      transition: opacity 2s ease;
     }
 
-    [data-time="dusk"] .galaxy {
-      animation: none;
+    .sky-atmosphere {
+      opacity: 0;
+      transition: opacity 2s ease;
+    }
+
+    [data-time="predawn"] .scene-predawn {
+      opacity: 1;
+    }
+
+    [data-time="morning"] .scene-morning {
+      opacity: 1;
+    }
+
+    [data-time="afternoon"] .scene-afternoon {
+      opacity: 1;
+    }
+
+    [data-time="dusk"] .scene-dusk {
+      opacity: 1;
+    }
+
+    [data-time="night"] .scene-night {
+      opacity: 1;
+    }
+
+    [data-time="predawn"] .scene-stars {
+      opacity: 0.28;
+    }
+
+    [data-time="dusk"] .scene-stars {
       opacity: 0.45;
     }
 
-    .galaxy .s1 { fill: #ffffff; }
-    .galaxy .s2 { fill: #cce8ff; }
-    .galaxy .s3 { fill: #fff8e0; }
+    [data-time="night"] .scene-stars {
+      opacity: 1;
+    }
+
+    [data-time="night"] .scene-milky-way {
+      opacity: 1;
+    }
+
+    .sky-detail .s1 { fill: #ffffff; }
+    .sky-detail .s2 { fill: #cce8ff; }
+    .sky-detail .s3 { fill: #fff8e0; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .sky-detail {
+        animation: none;
+        opacity: 1;
+      }
+
+      .sky-scene {
+        transition: none;
+      }
+
+      .sky-atmosphere {
+        transition: none;
+      }
+    }
   </style>
   <script>
     (function () {
@@ -214,7 +265,7 @@
   </script>
 </head>
 <body>
-  <svg class="galaxy" viewBox="0 0 1200 200" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" aria-hidden="true">
+  <svg class="sky-detail" viewBox="0 0 1200 200" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" aria-hidden="true">
     <defs>
       <linearGradient id="mw-fade" x1="0" y1="0" x2="0" y2="200" gradientUnits="userSpaceOnUse">
         <stop offset="0%"   style="stop-color:var(--paper)" stop-opacity="1"/>
@@ -240,10 +291,26 @@
         <stop offset="88%"  stop-color="#6878a8" stop-opacity="0.016"/>
         <stop offset="100%" stop-color="#6878a8" stop-opacity="0"/>
       </linearGradient>
+      <linearGradient id="sun-haze" x1="70" y1="0" x2="320" y2="0" gradientUnits="userSpaceOnUse">
+        <stop offset="0%"   style="stop-color:var(--accent)" stop-opacity="0"/>
+        <stop offset="35%"  style="stop-color:var(--accent)" stop-opacity="0.24"/>
+        <stop offset="65%"  style="stop-color:var(--accent)" stop-opacity="0.24"/>
+        <stop offset="100%" style="stop-color:var(--accent)" stop-opacity="0"/>
+      </linearGradient>
+      <linearGradient id="contrail-fade" x1="0" y1="42" x2="450" y2="106" gradientUnits="userSpaceOnUse">
+        <stop offset="0%"   style="stop-color:var(--ink-faint)" stop-opacity="0"/>
+        <stop offset="30%"  style="stop-color:var(--ink-faint)" stop-opacity="0.2"/>
+        <stop offset="88%"  style="stop-color:var(--ink-faint)" stop-opacity="0.12"/>
+        <stop offset="100%" style="stop-color:var(--ink-faint)" stop-opacity="0"/>
+      </linearGradient>
+      <clipPath id="morning-sun-half">
+        <rect x="120" y="24" width="110" height="54"/>
+      </clipPath>
     </defs>
 
-    <!-- Stars -->
-    <circle cx="38"   cy="22"  r="0.8" opacity="0.35" class="s1"/>
+    <g class="sky-atmosphere scene-stars">
+      <!-- Stars -->
+      <circle cx="38"   cy="22"  r="0.8" opacity="0.35" class="s1"/>
     <circle cx="87"   cy="145" r="0.6" opacity="0.28" class="s2"/>
     <circle cx="115"  cy="58"  r="1.1" opacity="0.55" class="s1"/>
     <circle cx="142"  cy="182" r="0.5" opacity="0.20" class="s1"/>
@@ -314,12 +381,82 @@
     <circle cx="960"  cy="160" r="0.6" opacity="0.26" class="s1"/>
     <circle cx="1180" cy="32"  r="1.0" opacity="0.48" class="s1"/>
 
-    <!-- Milky way band -->
-    <rect x="0" y="0" width="1200" height="200" fill="url(#mw-band-v)"/>
-    <rect x="0" y="0" width="1200" height="200" fill="url(#mw-hband)"/>
+    </g>
 
-    <!-- Edge fade overlay -->
-    <rect x="0" y="0" width="1200" height="200" fill="url(#mw-fade)"/>
+    <g class="sky-atmosphere scene-milky-way">
+      <!-- Milky way band -->
+      <rect x="0" y="0" width="1200" height="200" fill="url(#mw-band-v)"/>
+      <rect x="0" y="0" width="1200" height="200" fill="url(#mw-hband)"/>
+
+      <!-- Edge fade overlay -->
+      <rect x="0" y="0" width="1200" height="200" fill="url(#mw-fade)"/>
+    </g>
+
+    <!-- Predawn: crescent and a distant weather balloon -->
+    <g class="sky-scene scene-predawn">
+      <path class="predawn-crescent"
+            d="M104 38a24 24 0 1 0 27 35a20 20 0 1 1-27-35z"
+            fill="var(--ink)" opacity="0.48"/>
+      <g class="weather-balloon" transform="translate(1035 48)"
+         fill="none" stroke="var(--ink-faint)"
+         stroke-linecap="round" vector-effect="non-scaling-stroke" opacity="0.48">
+        <path d="M-10 0C-10-11 10-11 10 0C10 8 5 14 0 18C-5 14-10 8-10 0z"
+              fill="var(--ink-faint)" fill-opacity="0.24"/>
+        <path d="M0 18v15"/>
+        <rect x="-2.5" y="33" width="5" height="4"/>
+      </g>
+    </g>
+
+    <!-- Morning: low sun, haze, and three distant birds -->
+    <g class="sky-scene scene-morning">
+      <circle class="morning-sun" cx="175" cy="78" r="48"
+              fill="var(--accent)" opacity="0.42"
+              clip-path="url(#morning-sun-half)"/>
+      <rect x="55" y="78" width="260" height="1.5" fill="url(#sun-haze)"/>
+      <rect x="86" y="88" width="220" height="1" fill="url(#sun-haze)" opacity="0.6"/>
+      <g fill="none" stroke="var(--accent)" stroke-width="1.4" stroke-linecap="round"
+         vector-effect="non-scaling-stroke" opacity="0.62">
+        <path class="morning-bird" d="M650 54q7-7 14 0q7-7 14 0"/>
+        <path class="morning-bird" d="M700 71q6-6 12 0q6-6 12 0"/>
+        <path class="morning-bird" d="M747 43q5-5 10 0q5-5 10 0"/>
+      </g>
+    </g>
+
+    <!-- Afternoon: one cloud and a small drone passing behind it -->
+    <g class="sky-scene scene-afternoon">
+      <g class="afternoon-cloud" fill="var(--ink)" opacity="0.14">
+        <ellipse cx="398" cy="75" rx="78" ry="15"/>
+        <ellipse cx="368" cy="67" rx="35" ry="20"/>
+        <ellipse cx="418" cy="61" rx="43" ry="26"/>
+        <ellipse cx="456" cy="70" rx="34" ry="19"/>
+      </g>
+      <g class="afternoon-drone" transform="translate(510 77)"
+         fill="none" stroke="var(--ink-faint)"
+         stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"
+         vector-effect="non-scaling-stroke" opacity="0.56">
+        <path d="M-17 0h34M-6 0l6 6l6-6M0 6v5"/>
+        <ellipse cx="-20" cy="-1" rx="8" ry="2"/>
+        <ellipse cx="20" cy="-1" rx="8" ry="2"/>
+        <path d="M-16 0l-7 6M16 0l7 6"/>
+      </g>
+    </g>
+
+    <!-- Dusk: a fading contrail and its tiny plane -->
+    <g class="sky-scene scene-dusk">
+      <path class="dusk-contrail" d="M0 40L442 104"
+            fill="none" stroke="url(#contrail-fade)"
+            stroke-width="3" vector-effect="non-scaling-stroke"/>
+      <path class="dusk-plane" d="M438 99l18 7l-18 1l-7 5l2-7l-3-7z"
+            fill="var(--ink-faint)" opacity="0.42"/>
+    </g>
+
+    <!-- Night: a satellite quietly crossing the existing stars -->
+    <g class="sky-scene scene-night">
+      <path class="satellite-track" d="M400 72L552 96" fill="none"
+            stroke="var(--ink-faint)" stroke-width="0.8"
+            vector-effect="non-scaling-stroke" opacity="0.2"/>
+      <circle cx="552" cy="96" r="1.7" fill="var(--ink)" opacity="0.5"/>
+    </g>
   </svg>
 
   <div class="card">
