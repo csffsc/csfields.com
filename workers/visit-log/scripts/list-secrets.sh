@@ -4,7 +4,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 config_env="prod"
-config_path="/visit-us"
+config_path="/visit-log"
 if [[ -f infisical.config.json ]]; then
   read -r config_env config_path < <(node -e "
     const fs = require('node:fs');

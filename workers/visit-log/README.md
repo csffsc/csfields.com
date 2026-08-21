@@ -15,48 +15,33 @@ npm run deploy
 
 ## Secrets (Infisical Cloud)
 
-Remote D1 commands load `CLOUDFLARE_API_TOKEN` from Infisical — not from git or a committed `.env`.
+Remote D1 loads `CLOUDFLARE_API_TOKEN` from Infisical. Config lives in two files:
 
-| Infisical | Value |
-|-----------|--------|
-| Project | `csfields` |
-| Environment | `prod` |
-| Path | `/visit-us` |
-| Secret | `CLOUDFLARE_API_TOKEN` |
+| File | Purpose |
+|------|---------|
+| `.infisical.json` | Project link (`infisical init`) |
+| `infisical.config.json` | **Env slug + folder path** — edit when you know where the secret is |
 
-**One-time project link** (run locally, then commit `.infisical.json`):
+**Stuck? One command finds it:**
 
 ```bash
-cd workers/visit-log
-infisical init   # select project csfields
+npm run secrets:discover
 ```
 
-**Runtime auth to Infisical**
+Look for `CLOUDFLARE_API_TOKEN` in the output, then set `infisical.config.json`:
 
-- **Cloud Agents / CI:** inject `INFISICAL_TOKEN` (read-only service token for `csfields` / `prod`, path `/visit-us`)
-- **Local (Mac):** `infisical login` — then run npm scripts without setting `INFISICAL_TOKEN`
+```json
+{ "env": "prod", "path": "/visit-log" }
+```
 
-Create a service token in Infisical: **Project Settings → Service Tokens → Create** — scope to env `prod`, path `/visit-us`, read-only. Paste the token into the Cursor environment secret `INFISICAL_TOKEN` (not into chat or git).
+Then `npm run auth:check`.
 
-**Verify wrangler + D1 via Infisical:**
+- **Local Mac:** `infisical login` — no `INFISICAL_TOKEN` needed
+- **Cloud Agents:** inject `INFISICAL_TOKEN` (read-only, same env + path as config)
 
 ```bash
-npm run auth:check
 npm run d1:query -- "SELECT COUNT(*) AS n FROM visits;"
 ```
-
-All `db:remote`, `db:dev`, and `d1:query` scripts wrap commands with `scripts/with-infisical.sh`. Local `--local` D1 does not need Cloudflare credentials.
-
-Optional overrides: `INFISICAL_PROJECT_ID`, `INFISICAL_ENV`, `INFISICAL_PATH`. Set `VISIT_LOG_SKIP_INFISICAL=1` only if `CLOUDFLARE_API_TOKEN` is already exported (e.g. debugging).
-
-**Find where the secret lives** (if auth fails):
-
-```bash
-npm run secrets:list
-INFISICAL_ENV=dev npm run secrets:list    # try other env slugs
-```
-
-Infisical env slugs are **not** display names — check **Project Settings → Environments** for the exact slug (`prod`, `dev`, etc.).
 
 ## Rollback
 

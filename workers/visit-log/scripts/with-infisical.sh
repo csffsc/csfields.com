@@ -22,7 +22,7 @@ if [[ -f infisical.config.json ]]; then
 fi
 
 INFISICAL_ENV="${INFISICAL_ENV:-${config_env:-prod}}"
-INFISICAL_PATH="${INFISICAL_PATH:-${config_path:-/visit-us}}"
+INFISICAL_PATH="${INFISICAL_PATH:-${config_path:-/visit-log}}"
 
 if [[ $# -lt 1 ]]; then
   echo "usage: $0 <command> [args...]" >&2
