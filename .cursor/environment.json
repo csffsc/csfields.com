@@ -5,6 +5,10 @@
     {
       "name": "site",
       "command": "python3 -m http.server 8000"
+    },
+    {
+      "name": "monitor",
+      "command": "bash scripts/monitor-site.sh"
     }
   ],
   "ports": [8000]
