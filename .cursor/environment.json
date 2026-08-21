@@ -1,0 +1,11 @@
+{
+  "name": "csfields.com",
+  "install": "bash .cursor/install.sh",
+  "terminals": [
+    {
+      "name": "site",
+      "command": "python3 -m http.server 8000"
+    }
+  ],
+  "ports": [8000]
+}
