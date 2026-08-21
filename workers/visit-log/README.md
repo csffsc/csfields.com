@@ -31,7 +31,12 @@ cd workers/visit-log
 infisical init   # select project csfields
 ```
 
-**Runtime auth to Infisical:** export `INFISICAL_TOKEN` (read-only service token for `csfields` / `prod` / `/visit-log`). In Cursor Cloud Agents, inject `INFISICAL_TOKEN` into the environment — do not paste `CLOUDFLARE_API_TOKEN` there directly once Infisical is wired up.
+**Runtime auth to Infisical**
+
+- **Local (Mac):** `infisical login` — then run npm scripts without setting `INFISICAL_TOKEN`
+- **Cloud Agents / CI:** inject `INFISICAL_TOKEN` (read-only service token for `csfields` / `prod` / `/visit-log`)
+
+Create a service token in Infisical: **Project Settings → Service Tokens → Create** — scope to env `prod`, path `/visit-log`, read-only. Paste the token into the Cursor environment secret `INFISICAL_TOKEN` (not into chat or git).
 
 **Verify wrangler + D1 via Infisical:**
 

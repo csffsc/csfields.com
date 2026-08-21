@@ -23,24 +23,21 @@ if ! command -v infisical >/dev/null 2>&1; then
   cat >&2 <<'EOF'
 infisical CLI not found.
 
-Install (Linux/macOS):
+Install (macOS):
+  brew install infisical/get-cli/infisical
+
+Install (Linux):
   curl -1sLf 'https://artifacts-cli.infisical.com/setup.sh' | sudo -E bash
 
-Then set INFISICAL_TOKEN (Infisical service token with read access to csfields prod /visit-log).
+Cloud Agents need INFISICAL_TOKEN (read-only service token for csfields prod /visit-log).
+Local dev can use `infisical login` instead.
 EOF
   exit 1
 fi
 
+# INFISICAL_TOKEN is required in CI/Cloud Agents. Locally, infisical login also works.
 if [[ -z "${INFISICAL_TOKEN:-}" ]]; then
-  cat >&2 <<'EOF'
-INFISICAL_TOKEN is not set.
-
-Create a read-only Infisical service token for project csfields (env prod, folder /visit-log)
-and export INFISICAL_TOKEN in this shell or inject it into the Cursor Cloud Agent environment.
-
-CLOUDFLARE_API_TOKEN is loaded from Infisical at /visit-log — do not commit or paste it into git.
-EOF
-  exit 1
+  echo "INFISICAL_TOKEN not set; using infisical CLI login session (if available)." >&2
 fi
 
 export INFISICAL_DISABLE_UPDATE_CHECK="${INFISICAL_DISABLE_UPDATE_CHECK:-true}"
