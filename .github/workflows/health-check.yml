@@ -1,0 +1,96 @@
+name: Site health check
+
+on:
+  schedule:
+    # Every 15 minutes (UTC). GitHub's minimum is 5 min and scheduled runs may
+    # be delayed under load, so this is best-effort, not second-precise.
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      force_fail:
+        description: "Simulate a failed check to test the email alert"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: health-check
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe https://csfields.com/
+        id: probe
+        run: |
+          set -euo pipefail
+
+          if [ "${{ inputs.force_fail }}" = "true" ]; then
+            echo "reason=Forced failure (workflow_dispatch test)" >> "$GITHUB_OUTPUT"
+            echo "::error::Forced failure for alert test"
+            exit 1
+          fi
+
+          url="https://csfields.com/"
+          code="$(curl -s -o /tmp/page.html -w '%{http_code}' \
+                    --retry 3 --retry-delay 5 --max-time 20 "$url" || echo 000)"
+
+          if [ "$code" != "200" ]; then
+            echo "reason=Unexpected HTTP status $code from $url" >> "$GITHUB_OUTPUT"
+            echo "::error::HTTP $code from $url"
+            exit 1
+          fi
+
+          # Positive content assertion: robust to Cloudflare's per-request email
+          # obfuscation / beacon token injection (a raw-body hash is not).
+          if ! grep -q '<title>Chris Fields</title>' /tmp/page.html; then
+            echo "reason=HTTP 200 but expected content missing at $url" >> "$GITHUB_OUTPUT"
+            echo "::error::Content assertion failed for $url"
+            exit 1
+          fi
+
+          echo "OK: HTTP 200 with expected content from $url"
+
+      - name: Email alert on failure
+        if: failure()
+        env:
+          SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          ALERT_TO: exceptions@csfields.com
+          REASON: ${{ steps.probe.outputs.reason }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          : "${SMTP_SERVER:?SMTP_SERVER secret is not set}"
+          : "${SMTP_PORT:?SMTP_PORT secret is not set}"
+          : "${SMTP_USERNAME:?SMTP_USERNAME secret is not set}"
+          : "${SMTP_PASSWORD:?SMTP_PASSWORD secret is not set}"
+
+          {
+            echo "From: csfields.com monitor <$SMTP_USERNAME>"
+            echo "To: $ALERT_TO"
+            echo "Subject: [csfields.com] health check FAILED"
+            echo "Date: $(date -uR)"
+            echo "MIME-Version: 1.0"
+            echo "Content-Type: text/plain; charset=UTF-8"
+            echo
+            echo "The scheduled health check for https://csfields.com/ failed."
+            echo
+            echo "Reason:  ${REASON:-unknown}"
+            echo "When:    $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+            echo "Run log: $RUN_URL"
+          } > /tmp/alert.eml
+
+          # Port 465 = implicit TLS (smtps); anything else (e.g. 587) = STARTTLS.
+          if [ "$SMTP_PORT" = "465" ]; then scheme="smtps"; else scheme="smtp"; fi
+
+          curl --ssl-reqd --url "$scheme://$SMTP_SERVER:$SMTP_PORT" \
+            --user "$SMTP_USERNAME:$SMTP_PASSWORD" \
+            --mail-from "$SMTP_USERNAME" \
+            --mail-rcpt "$ALERT_TO" \
+            --upload-file /tmp/alert.eml
