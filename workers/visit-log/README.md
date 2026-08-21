@@ -49,6 +49,15 @@ All `db:remote`, `db:dev`, and `d1:query` scripts wrap commands with `scripts/wi
 
 Optional overrides: `INFISICAL_PROJECT_ID`, `INFISICAL_ENV`, `INFISICAL_PATH`. Set `VISIT_LOG_SKIP_INFISICAL=1` only if `CLOUDFLARE_API_TOKEN` is already exported (e.g. debugging).
 
+**Find where the secret lives** (if auth fails):
+
+```bash
+npm run secrets:list
+INFISICAL_ENV=dev npm run secrets:list    # try other env slugs
+```
+
+Infisical env slugs are **not** display names — check **Project Settings → Environments** for the exact slug (`prod`, `dev`, etc.).
+
 ## Rollback
 
 If the site breaks, remove the Worker routes in the Cloudflare dashboard: **Workers → visit-log → Domains & Routes**. Traffic then hits the bare GitHub Pages origin again (no logging).
