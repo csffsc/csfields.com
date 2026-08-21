@@ -7,11 +7,42 @@ Route-attached Cloudflare Worker in front of `csfields.com` (single static `inde
 ## Deploy
 
 ```bash
-npx wrangler login
+npx wrangler login          # deploy only; D1 reads use Infisical (below)
 npx wrangler d1 create visit-log-db   # first time only; paste id into wrangler.toml
-npm run db:remote
+npm run db:remote           # applies schema via Infisical → CLOUDFLARE_API_TOKEN
 npm run deploy
 ```
+
+## Secrets (Infisical Cloud)
+
+Remote D1 commands load `CLOUDFLARE_API_TOKEN` from Infisical — not from git or a committed `.env`.
+
+| Infisical | Value |
+|-----------|--------|
+| Project | `csfields` |
+| Environment | `prod` |
+| Folder | `/visit-log` |
+| Secret | `CLOUDFLARE_API_TOKEN` |
+
+**One-time project link** (run locally, then commit `.infisical.json`):
+
+```bash
+cd workers/visit-log
+infisical init   # select project csfields
+```
+
+**Runtime auth to Infisical:** export `INFISICAL_TOKEN` (read-only service token for `csfields` / `prod` / `/visit-log`). In Cursor Cloud Agents, inject `INFISICAL_TOKEN` into the environment — do not paste `CLOUDFLARE_API_TOKEN` there directly once Infisical is wired up.
+
+**Verify wrangler + D1 via Infisical:**
+
+```bash
+npm run auth:check
+npm run d1:query -- "SELECT COUNT(*) AS n FROM visits;"
+```
+
+All `db:remote`, `db:dev`, and `d1:query` scripts wrap commands with `scripts/with-infisical.sh`. Local `--local` D1 does not need Cloudflare credentials.
+
+Optional overrides: `INFISICAL_PROJECT_ID`, `INFISICAL_ENV`, `INFISICAL_PATH`. Set `VISIT_LOG_SKIP_INFISICAL=1` only if `CLOUDFLARE_API_TOKEN` is already exported (e.g. debugging).
 
 ## Rollback
 
@@ -26,7 +57,7 @@ npm run tail
 ## Recent visits
 
 ```bash
-npx wrangler d1 execute visit-log-db --remote --command \
+npm run d1:query -- \
   "SELECT ts, ip, country, method, status, path, bot_guess, substr(ua,1,60) AS ua
    FROM visits ORDER BY id DESC LIMIT 50;"
 ```
@@ -36,7 +67,7 @@ npx wrangler d1 execute visit-log-db --remote --command \
 `bot_guess = 0` alone is not enough. Also drop obvious probe shapes (404s, `.php`, `/wp-`):
 
 ```bash
-npx wrangler d1 execute visit-log-db --remote --command \
+npm run d1:query -- \
   "SELECT ts, ip, country, status, path, substr(ua,1,80) AS ua
    FROM visits
    WHERE bot_guess = 0
@@ -49,7 +80,7 @@ npx wrangler d1 execute visit-log-db --remote --command \
 ## Scanner probes by path
 
 ```bash
-npx wrangler d1 execute visit-log-db --remote --command \
+npm run d1:query -- \
   "SELECT path, COUNT(*) AS n
    FROM visits
    WHERE bot_guess = 1
@@ -64,7 +95,7 @@ npx wrangler d1 execute visit-log-db --remote --command \
 ## Traffic by day
 
 ```bash
-npx wrangler d1 execute visit-log-db --remote --command \
+npm run d1:query -- \
   "SELECT date(ts) AS day, COUNT(*) AS n
    FROM visits
    GROUP BY date(ts)
@@ -74,7 +105,7 @@ npx wrangler d1 execute visit-log-db --remote --command \
 ## Traffic by country
 
 ```bash
-npx wrangler d1 execute visit-log-db --remote --command \
+npm run d1:query -- \
   "SELECT country, COUNT(*) AS n
    FROM visits
    GROUP BY country
@@ -85,7 +116,7 @@ npx wrangler d1 execute visit-log-db --remote --command \
 ## Repeat visitors by IP
 
 ```bash
-npx wrangler d1 execute visit-log-db --remote --command \
+npm run d1:query -- \
   "SELECT ip, country, COUNT(*) AS n, MIN(ts) AS first_seen, MAX(ts) AS last_seen
    FROM visits
    GROUP BY ip
@@ -99,14 +130,14 @@ npx wrangler d1 execute visit-log-db --remote --command \
 Daily cron `0 5 * * *` (see `[triggers]` in `wrangler.toml`) prunes rows older than 90 days. Use this to confirm retained range:
 
 ```bash
-npx wrangler d1 execute visit-log-db --remote --command \
+npm run d1:query -- \
   "SELECT COUNT(*) AS rows, MIN(ts) AS oldest, MAX(ts) AS newest FROM visits;"
 ```
 
 Manual prune fallback:
 
 ```bash
-npx wrangler d1 execute visit-log-db --remote --command \
+npm run d1:query -- \
   "DELETE FROM visits WHERE ts < datetime('now', '-90 days');"
 ```
 
