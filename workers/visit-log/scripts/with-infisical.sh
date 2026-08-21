@@ -8,7 +8,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 INFISICAL_ENV="${INFISICAL_ENV:-prod}"
-INFISICAL_PATH="${INFISICAL_PATH:-/}"
+INFISICAL_PATH="${INFISICAL_PATH:-/visit-us}"
 
 if [[ $# -lt 1 ]]; then
   echo "usage: $0 <command> [args...]" >&2
