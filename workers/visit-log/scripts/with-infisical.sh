@@ -8,7 +8,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 INFISICAL_ENV="${INFISICAL_ENV:-prod}"
-INFISICAL_PATH="${INFISICAL_PATH:-/visit-log}"
+INFISICAL_PATH="${INFISICAL_PATH:-/}"
 
 if [[ $# -lt 1 ]]; then
   echo "usage: $0 <command> [args...]" >&2
@@ -29,7 +29,7 @@ Install (macOS):
 Install (Linux):
   curl -1sLf 'https://artifacts-cli.infisical.com/setup.sh' | sudo -E bash
 
-Cloud Agents need INFISICAL_TOKEN (read-only service token for csfields prod /visit-log).
+Cloud Agents need INFISICAL_TOKEN (read-only service token for csfields prod).
 Local dev can use `infisical login` instead.
 EOF
   exit 1

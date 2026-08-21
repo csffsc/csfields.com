@@ -21,7 +21,7 @@ Remote D1 commands load `CLOUDFLARE_API_TOKEN` from Infisical — not from git o
 |-----------|--------|
 | Project | `csfields` |
 | Environment | `prod` |
-| Folder | `/visit-log` |
+| Path | `/` (project root — no subfolder) |
 | Secret | `CLOUDFLARE_API_TOKEN` |
 
 **One-time project link** (run locally, then commit `.infisical.json`):
@@ -33,10 +33,10 @@ infisical init   # select project csfields
 
 **Runtime auth to Infisical**
 
+- **Cloud Agents / CI:** inject `INFISICAL_TOKEN` (read-only service token for `csfields` / `prod`, path `/`)
 - **Local (Mac):** `infisical login` — then run npm scripts without setting `INFISICAL_TOKEN`
-- **Cloud Agents / CI:** inject `INFISICAL_TOKEN` (read-only service token for `csfields` / `prod` / `/visit-log`)
 
-Create a service token in Infisical: **Project Settings → Service Tokens → Create** — scope to env `prod`, path `/visit-log`, read-only. Paste the token into the Cursor environment secret `INFISICAL_TOKEN` (not into chat or git).
+Create a service token in Infisical: **Project Settings → Service Tokens → Create** — scope to env `prod`, path `/` (root), read-only. Paste the token into the Cursor environment secret `INFISICAL_TOKEN` (not into chat or git).
 
 **Verify wrangler + D1 via Infisical:**
 
