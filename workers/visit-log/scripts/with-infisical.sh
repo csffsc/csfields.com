@@ -7,8 +7,22 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-INFISICAL_ENV="${INFISICAL_ENV:-prod}"
-INFISICAL_PATH="${INFISICAL_PATH:-/visit-us}"
+config_env=""
+config_path=""
+if [[ -f infisical.config.json ]]; then
+  read -r config_env config_path < <(node -e "
+    const fs = require('node:fs');
+    try {
+      const cfg = JSON.parse(fs.readFileSync('infisical.config.json', 'utf8'));
+      process.stdout.write([cfg.env || '', cfg.path || ''].join('\t'));
+    } catch {
+      process.stdout.write('\t');
+    }
+  ")
+fi
+
+INFISICAL_ENV="${INFISICAL_ENV:-${config_env:-prod}}"
+INFISICAL_PATH="${INFISICAL_PATH:-${config_path:-/visit-us}}"
 
 if [[ $# -lt 1 ]]; then
   echo "usage: $0 <command> [args...]" >&2
