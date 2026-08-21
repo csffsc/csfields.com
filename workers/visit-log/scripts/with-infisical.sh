@@ -14,11 +14,11 @@ if [[ -f infisical.config.json ]]; then
     const fs = require('node:fs');
     try {
       const cfg = JSON.parse(fs.readFileSync('infisical.config.json', 'utf8'));
-      process.stdout.write([cfg.env || '', cfg.path || ''].join('\t'));
+      console.log([cfg.env || '', cfg.path || ''].join('\t'));
     } catch {
-      process.stdout.write('\t');
+      console.log('\t');
     }
-  ")
+  ") || true
 fi
 
 INFISICAL_ENV="${INFISICAL_ENV:-${config_env:-prod}}"
@@ -51,6 +51,17 @@ fi
 
 # INFISICAL_TOKEN is required in CI/Cloud Agents. Locally, infisical login also works.
 if [[ -z "${INFISICAL_TOKEN:-}" ]]; then
+  if [[ ! -t 0 ]] || [[ -n "${CI:-}" ]] || [[ -n "${CURSOR_CLOUD:-}" ]]; then
+    cat >&2 <<'EOF'
+INFISICAL_TOKEN is not set and this is a non-interactive environment.
+
+Create a read-only Infisical service token (csfields, prod, /visit-log) and inject
+INFISICAL_TOKEN into the Cursor Cloud Agent environment.
+
+Local Mac: run `infisical login` in an interactive terminal instead.
+EOF
+    exit 1
+  fi
   echo "INFISICAL_TOKEN not set; using infisical CLI login session (if available)." >&2
 fi
 
