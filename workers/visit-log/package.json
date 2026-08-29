@@ -10,10 +10,15 @@
     "auth:check": "bash scripts/with-infisical.sh wrangler whoami",
     "secrets:discover": "bash scripts/discover-infisical.sh",
     "secrets:list": "bash scripts/list-secrets.sh",
+    "report:weekly": "bash scripts/with-infisical.sh node scripts/report-period.mjs weekly",
+    "report:monthly": "bash scripts/with-infisical.sh node scripts/report-period.mjs monthly",
     "db:local": "wrangler d1 execute visit-log-db --local --file=./schema.sql",
     "db:remote": "bash scripts/with-infisical.sh wrangler d1 execute visit-log-db --remote --file=./schema.sql",
     "db:dev": "bash scripts/with-infisical.sh wrangler d1 execute visit-log-db-dev --remote --file=./schema.sql",
     "d1:query": "bash scripts/with-infisical.sh wrangler d1 execute visit-log-db --remote --command"
+  },
+  "dependencies": {
+    "nodemailer": "^7.0.13"
   },
   "devDependencies": {
     "vitest": "^3.2.4",

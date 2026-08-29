@@ -7,6 +7,14 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+# Local Cursor agent shells are non-interactive; load a gitignored service token if present.
+if [[ -z "${INFISICAL_TOKEN:-}" && -f .env.local ]]; then
+  set -a
+  # shellcheck disable=SC1091
+  source .env.local
+  set +a
+fi
+
 config_env=""
 config_path=""
 if [[ -f infisical.config.json ]]; then
@@ -55,10 +63,10 @@ if [[ -z "${INFISICAL_TOKEN:-}" ]]; then
     cat >&2 <<'EOF'
 INFISICAL_TOKEN is not set and this is a non-interactive environment.
 
-Create a read-only Infisical service token (csfields, prod, /visit-log) and inject
-INFISICAL_TOKEN into the Cursor Cloud Agent environment.
+Local Cursor agent: copy .env.example → .env.local and paste a read-only service
+token (csfields, prod, /visit-log). Same token works for Cloud Agent Runtime Secrets.
 
-Local Mac: run `infisical login` in an interactive terminal instead.
+Interactive terminal: run `infisical login` instead, or use .env.local.
 EOF
     exit 1
   fi

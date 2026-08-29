@@ -36,8 +36,16 @@ Look for `CLOUDFLARE_API_TOKEN` in the output, then set `infisical.config.json`:
 
 Then `npm run auth:check`.
 
-- **Local Mac:** `infisical login` — no `INFISICAL_TOKEN` needed
-- **Cloud Agents:** inject `INFISICAL_TOKEN` (read-only, same env + path as config)
+- **Interactive terminal:** `infisical login` — no token file needed
+- **Cursor agent (local):** copy `.env.example` → `.env.local`, paste read-only `INFISICAL_TOKEN` (gitignored)
+- **Cloud Agents:** same token as Runtime Secret `INFISICAL_TOKEN`
+
+One-time local setup:
+
+```bash
+cp .env.example .env.local
+# paste service token from Infisical → csfields → Service Tokens (prod, /visit-log, read)
+```
 
 ```bash
 npm run d1:query -- "SELECT COUNT(*) AS n FROM visits;"
@@ -143,3 +151,29 @@ npm run d1:query -- \
 ## Privacy
 
 Stores client IPs, full URLs, and cookie headers in D1. Retained 90 days. No on-site privacy disclosure today.
+
+## Periodic reports (Q)
+
+Weekly (**168h**) and monthly (**672h** ≈ 28 days rolling) reports: 2XX summary + probe appendix, HTML email from **Q**, and a Cursor canvas.
+
+Infisical `/visit-log` secrets:
+
+| Secret | Purpose |
+|--------|---------|
+| `CLOUDFLARE_API_TOKEN` | D1 queries (existing) |
+| `q_email` | From address (`q@csfields.com`) and SMTP user |
+| `q_smtp_server` | Proton SMTP host |
+| `q_smtp_port` | SMTP port (587) |
+| `q_smtp_token` | Proton SMTP token |
+
+Optional: `REPORT_TO` (defaults to `q_email`).
+
+```bash
+npm run report:weekly -- --dry-run    # canvas only, no email
+npm run report:weekly                 # canvas + email from Q
+npm run report:monthly
+```
+
+Canvas output: `~/.cursor/projects/Users-chris-Code-csfields-com/canvases/visit-log-{weekly|monthly}-YYYY-MM-DD.canvas.tsx` (override with `VISIT_LOG_CANVAS_DIR`).
+
+Do not commit canvases or secrets.
