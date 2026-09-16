@@ -100,6 +100,13 @@ describe('buildReportQueries', () => {
     expect(queries.peopleCandidates).not.toMatch(/path = '\/e'/);
   });
 
+  it('can omit vid from people SQL before the D1 migration', () => {
+    const queries = buildReportQueries(168, { includeVid: false });
+    expect(queries.peopleCandidates).not.toMatch(/\bvid\b/);
+    expect(queries.firstSeen).toMatch(/GROUP BY ip/);
+    expect(queries.eventRows).toMatch(/path = '\/e'/);
+  });
+
   it('does not query unused capture columns', () => {
     const sql = Object.values(buildReportQueries(168)).join('\n');
     expect(sql).not.toMatch(/with_cookie/);

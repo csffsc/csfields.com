@@ -74,22 +74,17 @@ function probeWhere(windowSql) {
 
 /**
  * @param {number} hours
+ * @param {{ includeVid?: boolean }} [opts]
  */
-export function buildReportQueries(hours) {
+export function buildReportQueries(hours, opts = {}) {
+  const includeVid = opts.includeVid !== false;
+  const visitorCols = includeVid ? 'ip, vid' : 'ip';
   const w = windowClause(hours);
   const prev = previousWindowClause(hours);
   const peopleWindow = `${w} AND ${PEOPLE_SQL}`;
   const prevPeople = `${prev} AND ${PEOPLE_SQL}`;
-
-  return {
-    bounds: `SELECT datetime('now', '-${hours} hours') AS start,
-                    datetime('now') AS end,
-                    datetime('now', '-${hours * 2} hours') AS prev_start`,
-    peopleCandidates: `SELECT ip, vid, as_org, country, referer, ua, ts
-       FROM visits WHERE ${peopleWindow}`,
-    prevPeopleCandidates: `SELECT ip, vid, as_org, country, referer, ua, ts
-       FROM visits WHERE ${prevPeople}`,
-    firstSeen: `SELECT ip, vid, MIN(ts) AS first_seen
+  const firstSeen = includeVid
+    ? `SELECT ip, vid, MIN(ts) AS first_seen
        FROM visits
        WHERE ${PEOPLE_SQL}
          AND (
@@ -102,7 +97,22 @@ export function buildReportQueries(hours) {
              )
            )
          )
-       GROUP BY COALESCE(NULLIF(vid, ''), ip)`,
+       GROUP BY COALESCE(NULLIF(vid, ''), ip)`
+    : `SELECT ip, MIN(ts) AS first_seen
+       FROM visits
+       WHERE ${PEOPLE_SQL}
+         AND ip IN (SELECT DISTINCT ip FROM visits WHERE ${peopleWindow})
+       GROUP BY ip`;
+
+  return {
+    bounds: `SELECT datetime('now', '-${hours} hours') AS start,
+                    datetime('now') AS end,
+                    datetime('now', '-${hours * 2} hours') AS prev_start`,
+    peopleCandidates: `SELECT ${visitorCols}, as_org, country, referer, ua, ts
+       FROM visits WHERE ${peopleWindow}`,
+    prevPeopleCandidates: `SELECT ${visitorCols}, as_org, country, referer, ua, ts
+       FROM visits WHERE ${prevPeople}`,
+    firstSeen,
     eventRows: `SELECT query FROM visits WHERE ${w} AND path = '/e'`,
     totals2xx: `SELECT COUNT(*) AS requests, COUNT(DISTINCT ip) AS unique_ips,
             SUM(CASE WHEN bot_guess = 0 THEN 1 ELSE 0 END) AS human,
@@ -317,12 +327,17 @@ export function assembleReport(input) {
   };
 }
 
+export function tableHasVid(queryFn = d1Query) {
+  const cols = queryFn('PRAGMA table_info(visits)');
+  return cols.some((col) => col.name === 'vid');
+}
+
 /**
  * @param {number} hours
  * @param {(sql: string) => unknown[]} [queryFn]
  */
 export function fetchReportData(hours, queryFn = d1Query) {
-  const q = buildReportQueries(hours);
+  const q = buildReportQueries(hours, { includeVid: tableHasVid(queryFn) });
   const bounds = queryFn(q.bounds)[0] ?? {};
   return assembleReport({
     hours,
