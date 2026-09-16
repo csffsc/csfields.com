@@ -118,9 +118,9 @@ describe('extractVisit', () => {
     expect(visit.ua).toBe('curl/8.0');
     expect(visit.referer).toBe('https://example.com/');
     expect(visit.accept_language).toBe('en-US,en;q=0.9');
-    expect(visit.cookie).toBe('a=1; b=2');
+    expect(visit.cookie).toBe('');
     expect(visit.content_type).toBe('application/json');
-    expect(visit.body).toBe('{"probe":true}');
+    expect(visit.body).toBeNull();
     expect(visit.body_len).toBe(15);
     expect(visit.country).toBe('US');
     expect(visit.colo).toBe('EWR');
@@ -207,6 +207,21 @@ describe('extractVisit', () => {
       vid: 'new-visitor',
     });
     expect(visit.vid).toBe('new-visitor');
+  });
+
+  it('does not keep inbound cookie or request body on the visit record', async () => {
+    const req = fakeRequest({
+      url: 'https://csfields.com/',
+      headers: { Cookie: 'vid=abc; session=secret', 'Content-Type': 'application/json' },
+    });
+    const visit = await extractVisit(req, {
+      status: 200,
+      bodyText: '{"email":"nobody@example.com"}',
+      bodyLen: 30,
+    });
+    expect(visit.cookie).toBe('');
+    expect(visit.body).toBeNull();
+    expect(visit.vid).toBe('abc');
   });
 
   it('falls back to a current ISO timestamp when none is supplied', async () => {

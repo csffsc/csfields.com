@@ -59,7 +59,7 @@ describe('persistVisit', () => {
     expect(prepare).toHaveBeenCalledOnce();
     expect(bind).toHaveBeenCalledWith(
       sampleVisit.ts,
-      sampleVisit.ip,
+      '',
       sampleVisit.vid,
       sampleVisit.method,
       sampleVisit.url,
@@ -69,10 +69,10 @@ describe('persistVisit', () => {
       sampleVisit.ua,
       sampleVisit.referer,
       sampleVisit.accept_language,
-      sampleVisit.cookie,
+      '',
       sampleVisit.content_type,
       sampleVisit.body_len,
-      sampleVisit.body,
+      null,
       sampleVisit.country,
       sampleVisit.colo,
       sampleVisit.as_org,

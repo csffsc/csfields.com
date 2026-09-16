@@ -12,7 +12,7 @@ const INSERT = `
 
 /** @param {import('@cloudflare/workers-types').D1Database | undefined} db */
 export async function persistVisit(env, visit) {
-  // Workers Logs (7-day retention in dashboard / wrangler tail)
+  // Workers Logs keep the full visit (including IP) for ~7 days. D1 does not.
   console.log(JSON.stringify({ type: 'visit', ...visit }));
 
   if (!env || !env.DB) return;
@@ -20,7 +20,7 @@ export async function persistVisit(env, visit) {
   await env.DB.prepare(INSERT)
     .bind(
       visit.ts,
-      visit.ip,
+      '',
       visit.vid ?? '',
       visit.method,
       visit.url,
@@ -30,10 +30,10 @@ export async function persistVisit(env, visit) {
       visit.ua,
       visit.referer,
       visit.accept_language,
-      visit.cookie,
+      '',
       visit.content_type,
       visit.body_len,
-      visit.body,
+      null,
       visit.country,
       visit.colo,
       visit.as_org,

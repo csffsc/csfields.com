@@ -36,10 +36,13 @@ describe('visit-log fetch', () => {
     await waitUntil.mock.calls[0][0];
     expect(prepare).toHaveBeenCalled();
     const bound = bind.mock.calls[0];
+    expect(bound[1]).toBe('');
     expect(bound[2]).toBe('abc');
     expect(bound[5]).toBe('/e');
     expect(bound[6]).toBe('n=linkedin');
     expect(bound[7]).toBe(204);
+    expect(bound[11]).toBe('');
+    expect(bound[14]).toBeNull();
   });
 
   it('sets a vid cookie on / 200 when the request has none', async () => {

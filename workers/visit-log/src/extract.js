@@ -44,8 +44,6 @@ export function vidSetCookie(vid) {
   return `vid=${vid}; Max-Age=31536000; Path=/; SameSite=Lax; Secure`;
 }
 
-const MAX_BODY_CHARS = 8192;
-
 export function guessBot(ua) {
   if (!ua) return 1;
   return BOT_UA.test(ua) ? 1 : 0;
@@ -68,10 +66,8 @@ export async function extractVisit(request, responseBits) {
   const cf = request.cf || {};
   const bm = cf.botManagement;
 
-  let body = responseBits.bodyText;
   const bodyLen =
     responseBits.bodyLen == null ? null : Number(responseBits.bodyLen);
-  if (body != null && body.length > MAX_BODY_CHARS) body = null;
 
   return {
     ts: responseBits.ts || new Date().toISOString(),
@@ -85,10 +81,10 @@ export async function extractVisit(request, responseBits) {
     ua,
     referer: request.headers.get('Referer') || '',
     accept_language: request.headers.get('Accept-Language') || '',
-    cookie: request.headers.get('Cookie') || '',
+    cookie: '',
     content_type: request.headers.get('Content-Type') || '',
     body_len: bodyLen,
-    body,
+    body: null,
     country: cf.country || '',
     colo: cf.colo || '',
     as_org: cf.asOrganization || '',
