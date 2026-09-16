@@ -103,7 +103,7 @@ describe('buildReportQueries', () => {
   it('can omit vid from people SQL before the D1 migration', () => {
     const queries = buildReportQueries(168, { includeVid: false });
     expect(queries.peopleCandidates).not.toMatch(/\bvid\b/);
-    expect(queries.firstSeen).toMatch(/GROUP BY ip/);
+    expect(queries.firstSeen).toMatch(/GROUP BY NULLIF\(ip, ''\)/);
     expect(queries.eventRows).toMatch(/path = '\/e'/);
   });
 
@@ -120,6 +120,18 @@ describe('buildReportQueries', () => {
     expect(queries.probes).toMatch(/path != '\/e'/);
     expect(queries.probeTotal).toMatch(/path != '\/e'/);
     expect(queries.eventRows).toMatch(/path = '\/e'/);
+  });
+
+  it('counts 2XX unique visitors from non-empty vid then non-empty ip', () => {
+    const withVid = buildReportQueries(168);
+    expect(withVid.totals2xx).not.toMatch(/COUNT\(DISTINCT ip\)/);
+    expect(withVid.totals2xx).toMatch(/vid != ''/);
+    expect(withVid.totals2xx).toMatch(/ip != ''/);
+    expect(withVid.firstSeen).toMatch(/NULLIF\(ip, ''\)/);
+    const noVid = buildReportQueries(168, { includeVid: false });
+    expect(noVid.totals2xx).not.toMatch(/\bvid\b/);
+    expect(noVid.totals2xx).toMatch(/ip != ''/);
+    expect(noVid.totals2xx).not.toMatch(/COUNT\(DISTINCT ip\)/);
   });
 
   it('splits appendix into redirects, favicon/robots, and real probes', () => {
@@ -239,6 +251,56 @@ describe('assembleReport', () => {
     });
     expect(data.people.unique).toBe(1);
     expect(data.repeats).toEqual({ one: 0, twoToFour: 1, fivePlus: 0 });
+    expect(JSON.stringify(data)).not.toMatch(IPV4);
+  });
+
+  it('does not collapse empty IPs into one visitor', () => {
+    const data = assembleReport({
+      hours: 168,
+      bounds: {
+        start: '2026-09-09 16:00:00',
+        end: '2026-09-16 16:00:00',
+      },
+      peopleCandidates: [
+        {
+          ip: '',
+          vid: 'visitor-a',
+          as_org: 'Comcast Cable',
+          country: 'US',
+          referer: '',
+          ua: MAC_UA,
+          ts: '2026-09-16T16:00:00.000Z',
+        },
+        {
+          ip: '',
+          vid: 'visitor-b',
+          as_org: 'Comcast Cable',
+          country: 'US',
+          referer: '',
+          ua: MAC_UA,
+          ts: '2026-09-16T17:00:00.000Z',
+        },
+        {
+          ip: '',
+          vid: '',
+          as_org: 'Comcast Cable',
+          country: 'US',
+          referer: '',
+          ua: MAC_UA,
+          ts: '2026-09-16T18:00:00.000Z',
+        },
+      ],
+      firstSeen: [
+        { ip: '', vid: 'visitor-a', first_seen: '2026-08-01 00:00:00' },
+        { ip: '', vid: 'visitor-b', first_seen: '2026-09-16T17:00:00.000Z' },
+      ],
+      totals2xx: { requests: 3, unique_ips: 2, human: 3, bot: 0 },
+    });
+    expect(data.people.unique).toBe(2);
+    expect(data.people.hits).toBe(3);
+    expect(data.people.returning).toBe(1);
+    expect(data.people.newCount).toBe(1);
+    expect(data.repeats).toEqual({ one: 2, twoToFour: 0, fivePlus: 0 });
     expect(JSON.stringify(data)).not.toMatch(IPV4);
   });
 });

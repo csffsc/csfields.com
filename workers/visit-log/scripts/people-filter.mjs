@@ -29,8 +29,10 @@ export const PEOPLE_SQL = `status = 200 AND path = '/' AND bot_guess = 0`;
 
 /** @param {object} row */
 export function visitorKey(row) {
-  if (row?.vid) return `vid:${row.vid}`;
-  if (row?.ip) return `ip:${row.ip}`;
+  const vid = row?.vid == null ? '' : String(row.vid);
+  if (vid !== '') return `vid:${vid}`;
+  const ip = row?.ip == null ? '' : String(row.ip);
+  if (ip !== '') return `ip:${ip}`;
   return '';
 }
 

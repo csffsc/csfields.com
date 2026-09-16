@@ -178,6 +178,12 @@ describe('visitorKey', () => {
     expect(visitorKey({ vid: '', ip: '203.0.113.9' })).toBe('ip:203.0.113.9');
     expect(visitorKey({ ip: '203.0.113.9' })).toBe('ip:203.0.113.9');
   });
+
+  it('ignores empty vid and empty ip strings', () => {
+    expect(visitorKey({ vid: '', ip: '' })).toBe('');
+    expect(visitorKey({ vid: null, ip: '' })).toBe('');
+    expect(visitorKey({ vid: '', ip: null })).toBe('');
+  });
 });
 
 describe('parseEventQuery', () => {

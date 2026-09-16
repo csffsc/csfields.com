@@ -67,6 +67,13 @@ export function previousWindowClause(hours) {
   return `ts >= datetime('now', '-${hours * 2} hours') AND ts < datetime('now', '-${hours} hours')`;
 }
 
+function visitorIdentitySql(includeVid) {
+  if (includeVid) {
+    return `CASE WHEN vid IS NOT NULL AND vid != '' THEN 'v:' || vid WHEN ip IS NOT NULL AND ip != '' THEN 'i:' || ip ELSE NULL END`;
+  }
+  return `CASE WHEN ip IS NOT NULL AND ip != '' THEN ip ELSE NULL END`;
+}
+
 function probeWhere(windowSql) {
   return `${windowSql}
     AND ${NOT_BEACON_SQL}
@@ -87,12 +94,16 @@ export function buildReportQueries(hours, opts = {}) {
   const prev = previousWindowClause(hours);
   const peopleWindow = `${w} AND ${PEOPLE_SQL}`;
   const prevPeople = `${prev} AND ${PEOPLE_SQL}`;
+  const identity = visitorIdentitySql(includeVid);
+  const nonemptyIp = `ip IS NOT NULL AND ip != ''`;
   const firstSeen = includeVid
     ? `SELECT ip, vid, MIN(ts) AS first_seen
        FROM visits
        WHERE ${PEOPLE_SQL}
          AND (
-           ip IN (SELECT DISTINCT ip FROM visits WHERE ${peopleWindow})
+           (${nonemptyIp} AND ip IN (
+             SELECT DISTINCT ip FROM visits WHERE ${peopleWindow} AND ${nonemptyIp}
+           ))
            OR (
              vid IS NOT NULL AND vid != ''
              AND vid IN (
@@ -101,12 +112,13 @@ export function buildReportQueries(hours, opts = {}) {
              )
            )
          )
-       GROUP BY COALESCE(NULLIF(vid, ''), ip)`
+       GROUP BY COALESCE(NULLIF(vid, ''), NULLIF(ip, ''))`
     : `SELECT ip, MIN(ts) AS first_seen
        FROM visits
        WHERE ${PEOPLE_SQL}
-         AND ip IN (SELECT DISTINCT ip FROM visits WHERE ${peopleWindow})
-       GROUP BY ip`;
+         AND ${nonemptyIp}
+         AND ip IN (SELECT DISTINCT ip FROM visits WHERE ${peopleWindow} AND ${nonemptyIp})
+       GROUP BY NULLIF(ip, '')`;
 
   return {
     bounds: `SELECT datetime('now', '-${hours} hours') AS start,
@@ -118,7 +130,7 @@ export function buildReportQueries(hours, opts = {}) {
        FROM visits WHERE ${prevPeople}`,
     firstSeen,
     eventRows: `SELECT query FROM visits WHERE ${w} AND path = '/e'`,
-    totals2xx: `SELECT COUNT(*) AS requests, COUNT(DISTINCT ip) AS unique_ips,
+    totals2xx: `SELECT COUNT(*) AS requests, COUNT(DISTINCT ${identity}) AS unique_ips,
             SUM(CASE WHEN bot_guess = 0 THEN 1 ELSE 0 END) AS human,
             SUM(CASE WHEN bot_guess = 1 THEN 1 ELSE 0 END) AS bot
      FROM visits WHERE ${w} AND status BETWEEN 200 AND 299 AND ${NOT_BEACON_SQL}`,
@@ -215,10 +227,7 @@ export function assembleReport(input) {
   const countryAs = new Map();
   const countryAsVisitors = new Set();
   for (const row of sortedPeople) {
-    const key = visitorKey(row) || `row:${firstByVisitor.size}`;
-    hitsByVisitor.set(key, (hitsByVisitor.get(key) || 0) + 1);
-    if (!firstByVisitor.has(key)) firstByVisitor.set(key, row);
-
+    const key = visitorKey(row);
     const asKey = `${row.country ?? ''}\0${row.as_org ?? ''}`;
     let rec = countryAs.get(asKey);
     if (!rec) {
@@ -226,6 +235,9 @@ export function assembleReport(input) {
       countryAs.set(asKey, rec);
     }
     rec.hits += 1;
+    if (!key) continue;
+    hitsByVisitor.set(key, (hitsByVisitor.get(key) || 0) + 1);
+    if (!firstByVisitor.has(key)) firstByVisitor.set(key, row);
     const visitorAsKey = `${asKey}\0${key}`;
     if (!countryAsVisitors.has(visitorAsKey)) {
       countryAsVisitors.add(visitorAsKey);
