@@ -113,6 +113,15 @@ describe('buildReportQueries', () => {
     expect(sql).not.toMatch(/capture/i);
   });
 
+  it('excludes /e beacons from 2XX footnote, colo rollup, and probe filters', () => {
+    const queries = buildReportQueries(168);
+    expect(queries.totals2xx).toMatch(/path != '\/e'/);
+    expect(queries.byColo).toMatch(/path != '\/e'/);
+    expect(queries.probes).toMatch(/path != '\/e'/);
+    expect(queries.probeTotal).toMatch(/path != '\/e'/);
+    expect(queries.eventRows).toMatch(/path = '\/e'/);
+  });
+
   it('splits appendix into redirects, favicon/robots, and real probes', () => {
     const queries = buildReportQueries(168);
     expect(queries.redirects).toMatch(/status BETWEEN 300 AND 399/);

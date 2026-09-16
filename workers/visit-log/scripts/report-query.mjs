@@ -26,6 +26,9 @@ const FAVICON_ROBOTS_PATHS = [
 
 const FAVICON_ROBOTS_SQL = FAVICON_ROBOTS_PATHS.map((p) => `'${p}'`).join(', ');
 
+/** Beacons are 204s; keep them out of 2XX footnote, colo, and probe noise. */
+const NOT_BEACON_SQL = `path != '/e'`;
+
 /** @param {string} sql */
 export function d1Query(sql) {
   const result = spawnSync(
@@ -66,6 +69,7 @@ export function previousWindowClause(hours) {
 
 function probeWhere(windowSql) {
   return `${windowSql}
+    AND ${NOT_BEACON_SQL}
     AND path NOT IN (${FAVICON_ROBOTS_SQL})
     AND (status IS NULL OR status < 200 OR status >= 400 OR bot_guess = 1
          OR path LIKE '%.php%' OR path LIKE '/wp-%' OR path LIKE '%.env%')
@@ -117,9 +121,9 @@ export function buildReportQueries(hours, opts = {}) {
     totals2xx: `SELECT COUNT(*) AS requests, COUNT(DISTINCT ip) AS unique_ips,
             SUM(CASE WHEN bot_guess = 0 THEN 1 ELSE 0 END) AS human,
             SUM(CASE WHEN bot_guess = 1 THEN 1 ELSE 0 END) AS bot
-     FROM visits WHERE ${w} AND status BETWEEN 200 AND 299`,
+     FROM visits WHERE ${w} AND status BETWEEN 200 AND 299 AND ${NOT_BEACON_SQL}`,
     byColo: `SELECT colo, COUNT(*) AS n FROM visits
-     WHERE ${w} AND status BETWEEN 200 AND 299
+     WHERE ${w} AND status BETWEEN 200 AND 299 AND ${NOT_BEACON_SQL}
      GROUP BY colo ORDER BY n DESC LIMIT 10`,
     byStatus: `SELECT status, COUNT(*) AS n FROM visits
      WHERE ${w} AND (status IS NULL OR status < 200 OR status >= 300 OR bot_guess = 1)
