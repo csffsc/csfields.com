@@ -2,6 +2,7 @@ CREATE TABLE IF NOT EXISTS visits (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   ts TEXT NOT NULL,
   ip TEXT,
+  vid TEXT,
   method TEXT NOT NULL,
   url TEXT NOT NULL,
   path TEXT NOT NULL,
@@ -26,4 +27,5 @@ CREATE TABLE IF NOT EXISTS visits (
 
 CREATE INDEX IF NOT EXISTS idx_visits_ts ON visits(ts);
 CREATE INDEX IF NOT EXISTS idx_visits_ip ON visits(ip);
+CREATE INDEX IF NOT EXISTS idx_visits_vid ON visits(vid);
 CREATE INDEX IF NOT EXISTS idx_visits_bot_guess ON visits(bot_guess);

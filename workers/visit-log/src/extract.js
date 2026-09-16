@@ -7,11 +7,42 @@ const PROBE_PATH =
 
 const BENIGN_404 = new Set([
   '/favicon.ico',
+  '/favicon.svg',
   '/apple-touch-icon.png',
   '/apple-touch-icon-precomposed.png',
   '/robots.txt',
   '/sitemap.xml',
 ]);
+
+export function isBeaconPath(pathname) {
+  return pathname === '/e';
+}
+
+/** @param {string | null | undefined} cookieHeader */
+export function parseVidCookie(cookieHeader) {
+  if (!cookieHeader) return '';
+  const parts = String(cookieHeader).split(';');
+  for (const part of parts) {
+    const trimmed = part.trim();
+    const eq = trimmed.indexOf('=');
+    if (eq === -1) continue;
+    if (trimmed.slice(0, eq).trim().toLowerCase() !== 'vid') continue;
+    try {
+      return decodeURIComponent(trimmed.slice(eq + 1).trim());
+    } catch {
+      return trimmed.slice(eq + 1).trim();
+    }
+  }
+  return '';
+}
+
+export function shouldSetVidCookie(pathname, status, existingVid) {
+  return pathname === '/' && status === 200 && !existingVid;
+}
+
+export function vidSetCookie(vid) {
+  return `vid=${vid}; Max-Age=31536000; Path=/; SameSite=Lax; Secure`;
+}
 
 const MAX_BODY_CHARS = 8192;
 
@@ -45,6 +76,7 @@ export async function extractVisit(request, responseBits) {
   return {
     ts: responseBits.ts || new Date().toISOString(),
     ip: request.headers.get('CF-Connecting-IP') || '',
+    vid: responseBits.vid || parseVidCookie(request.headers.get('Cookie')) || '',
     method: request.method,
     url: url.href,
     path: url.pathname,

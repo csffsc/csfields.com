@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { extractVisit, guessBot, guessBotVisit } from './extract.js';
+import {
+  extractVisit,
+  guessBot,
+  guessBotVisit,
+  isBeaconPath,
+  parseVidCookie,
+  shouldSetVidCookie,
+  vidSetCookie,
+} from './extract.js';
 
 const BROWSER_UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15';
@@ -57,6 +65,14 @@ describe('guessBotVisit', () => {
 
   it('does not flag favicon.ico 404 with browser UA', () => {
     expect(guessBotVisit(BROWSER_UA, '/favicon.ico', 404)).toBe(0);
+  });
+
+  it('does not flag favicon.svg 404 with browser UA', () => {
+    expect(guessBotVisit(BROWSER_UA, '/favicon.svg', 404)).toBe(0);
+  });
+
+  it('does not flag /e 204 as a bot via the 404 heuristic', () => {
+    expect(guessBotVisit(BROWSER_UA, '/e', 204)).toBe(0);
   });
 
   it('does not flag normal browser on / with 200', () => {
@@ -173,6 +189,26 @@ describe('extractVisit', () => {
     expect(visit.ts).toBe(ts);
   });
 
+  it('parses vid from the Cookie header', async () => {
+    const req = fakeRequest({
+      url: 'https://csfields.com/',
+      headers: { Cookie: 'theme=night; vid=abc-123; other=1' },
+    });
+    const visit = await extractVisit(req, { status: 200, bodyText: null, bodyLen: null });
+    expect(visit.vid).toBe('abc-123');
+  });
+
+  it('uses an explicit vid override when the request has no cookie yet', async () => {
+    const req = fakeRequest({ url: 'https://csfields.com/' });
+    const visit = await extractVisit(req, {
+      status: 200,
+      bodyText: null,
+      bodyLen: null,
+      vid: 'new-visitor',
+    });
+    expect(visit.vid).toBe('new-visitor');
+  });
+
   it('falls back to a current ISO timestamp when none is supplied', async () => {
     const req = fakeRequest();
     const before = Date.now();
@@ -186,5 +222,33 @@ describe('extractVisit', () => {
     const parsed = Date.parse(visit.ts);
     expect(parsed).toBeGreaterThanOrEqual(before);
     expect(parsed).toBeLessThanOrEqual(after);
+  });
+});
+
+describe('vid cookie helpers', () => {
+  it('parses vid and ignores other cookies', () => {
+    expect(parseVidCookie('vid=hello-world; Path=/')).toBe('hello-world');
+    expect(parseVidCookie('a=1; vid=xyz')).toBe('xyz');
+    expect(parseVidCookie('')).toBe('');
+    expect(parseVidCookie(null)).toBe('');
+  });
+
+  it('sets vid only on a / 200 with no existing cookie', () => {
+    expect(shouldSetVidCookie('/', 200, '')).toBe(true);
+    expect(shouldSetVidCookie('/', 200, 'already')).toBe(false);
+    expect(shouldSetVidCookie('/', 301, '')).toBe(false);
+    expect(shouldSetVidCookie('/e', 204, '')).toBe(false);
+  });
+
+  it('emits a first-party Set-Cookie header', () => {
+    expect(vidSetCookie('abc')).toBe(
+      'vid=abc; Max-Age=31536000; Path=/; SameSite=Lax; Secure'
+    );
+  });
+
+  it('treats /e as a beacon path that must not fetch origin', () => {
+    expect(isBeaconPath('/e')).toBe(true);
+    expect(isBeaconPath('/')).toBe(false);
+    expect(isBeaconPath('/e/')).toBe(false);
   });
 });

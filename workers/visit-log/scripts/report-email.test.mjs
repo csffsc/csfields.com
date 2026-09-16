@@ -40,6 +40,7 @@ const data = {
     { hour: 14, n: 6 },
   ],
   repeats: { one: 8, twoToFour: 3, fivePlus: 1 },
+  events: { view: 40, linkedin: 12, mailto: 3, bio: 9, dwell: 30, dwellMedianMs: 18000 },
   noise: { redirects: 12, faviconRobots: 3, probes: 80, cloud2xx: 5 },
   appendix: {
     redirects: [{ path: '/', status: 301, n: 12 }],
@@ -76,6 +77,11 @@ describe('buildHtml', () => {
     expect(html).toMatch(/favicon\/robots/i);
     expect(html).toMatch(/2XX footnote|raw 2XX|2XX requests/i);
     expect(html).not.toMatch(/Unique paths/i);
+    expect(html).toMatch(/LinkedIn/);
+    expect(html).toMatch(/>12</);
+    expect(html).toMatch(/mailto/i);
+    expect(html).toMatch(/dwell/i);
+    expect(html).toMatch(/18000|18s|18,000/);
   });
 
   it('HTML-escapes paths and never interpolates raw IPs', () => {

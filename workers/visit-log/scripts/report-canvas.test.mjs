@@ -27,6 +27,7 @@ const data = {
   byReferrer: [{ bucket: 'none', n: 9 }],
   byHourEt: [{ hour: 9, n: 4 }],
   repeats: { one: 8, twoToFour: 3, fivePlus: 1 },
+  events: { view: 40, linkedin: 12, mailto: 3, bio: 9, dwell: 30, dwellMedianMs: 18000 },
   noise: { redirects: 12, faviconRobots: 3, probes: 80, cloud2xx: 5 },
   appendix: {
     redirects: [{ path: '/', status: 301, n: 12 }],
@@ -54,6 +55,8 @@ describe('renderCanvasSource', () => {
     expect(source).toMatch(/Hour/);
     expect(source).toMatch(/Referrer|arrived/i);
     expect(source).toMatch(/2–4|2-4/);
+    expect(source).toMatch(/linkedin/i);
+    expect(source).toMatch(/mailto/i);
   });
 
   it('keeps colo, status, and split probe tables underneath', () => {

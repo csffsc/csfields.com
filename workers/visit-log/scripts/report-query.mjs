@@ -6,8 +6,11 @@ import {
   deviceFamily,
   hourInEastern,
   isCloudAsOrg,
+  median,
+  parseEventQuery,
   parseVisitTs,
   referrerBucket,
+  visitorKey,
 } from './people-filter.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -82,15 +85,25 @@ export function buildReportQueries(hours) {
     bounds: `SELECT datetime('now', '-${hours} hours') AS start,
                     datetime('now') AS end,
                     datetime('now', '-${hours * 2} hours') AS prev_start`,
-    peopleCandidates: `SELECT ip, as_org, country, referer, ua, ts
+    peopleCandidates: `SELECT ip, vid, as_org, country, referer, ua, ts
        FROM visits WHERE ${peopleWindow}`,
-    prevPeopleCandidates: `SELECT ip, as_org, country, referer, ua, ts
+    prevPeopleCandidates: `SELECT ip, vid, as_org, country, referer, ua, ts
        FROM visits WHERE ${prevPeople}`,
-    firstSeen: `SELECT ip, MIN(ts) AS first_seen
+    firstSeen: `SELECT ip, vid, MIN(ts) AS first_seen
        FROM visits
        WHERE ${PEOPLE_SQL}
-         AND ip IN (SELECT DISTINCT ip FROM visits WHERE ${peopleWindow})
-       GROUP BY ip`,
+         AND (
+           ip IN (SELECT DISTINCT ip FROM visits WHERE ${peopleWindow})
+           OR (
+             vid IS NOT NULL AND vid != ''
+             AND vid IN (
+               SELECT DISTINCT vid FROM visits
+               WHERE ${peopleWindow} AND vid IS NOT NULL AND vid != ''
+             )
+           )
+         )
+       GROUP BY COALESCE(NULLIF(vid, ''), ip)`,
+    eventRows: `SELECT query FROM visits WHERE ${w} AND path = '/e'`,
     totals2xx: `SELECT COUNT(*) AS requests, COUNT(DISTINCT ip) AS unique_ips,
             SUM(CASE WHEN bot_guess = 0 THEN 1 ELSE 0 END) AS human,
             SUM(CASE WHEN bot_guess = 1 THEN 1 ELSE 0 END) AS bot
@@ -124,10 +137,11 @@ function tsMillis(ts) {
   return date ? date.getTime() : null;
 }
 
-function uniqueIps(rows) {
+function uniqueKeys(rows) {
   const set = new Set();
   for (const row of rows) {
-    if (row.ip) set.add(row.ip);
+    const key = visitorKey(row);
+    if (key) set.add(key);
   }
   return set;
 }
@@ -136,6 +150,17 @@ function countMapToList(map, keyName) {
   return [...map.entries()]
     .map(([key, n]) => ({ [keyName]: key, n }))
     .sort((a, b) => b.n - a.n);
+}
+
+function countEvents(eventRows) {
+  const counts = { view: 0, linkedin: 0, mailto: 0, bio: 0, dwell: 0 };
+  const dwellMs = [];
+  for (const row of eventRows ?? []) {
+    const parsed = parseEventQuery(row.query);
+    if (parsed.name in counts) counts[parsed.name] += 1;
+    if (parsed.name === 'dwell' && parsed.ms != null) dwellMs.push(parsed.ms);
+  }
+  return { ...counts, dwellMedianMs: median(dwellMs) };
 }
 
 /**
@@ -164,61 +189,62 @@ export function assembleReport(input) {
   );
 
   const windowStartMs = tsMillis(input.bounds?.start);
-  const firstSeenMap = new Map(
-    (input.firstSeen ?? []).map((row) => [row.ip, row.first_seen])
-  );
+  const firstSeenMap = new Map();
+  for (const row of input.firstSeen ?? []) {
+    const key = visitorKey(row);
+    if (key) firstSeenMap.set(key, row.first_seen);
+  }
 
   const sortedPeople = [...people].sort((a, b) => (tsMillis(a.ts) ?? 0) - (tsMillis(b.ts) ?? 0));
-  const firstByIp = new Map();
-  const hitsByIp = new Map();
+  const firstByVisitor = new Map();
+  const hitsByVisitor = new Map();
+  const countryAs = new Map();
+  const countryAsVisitors = new Set();
   for (const row of sortedPeople) {
-    const ip = row.ip || '';
-    hitsByIp.set(ip, (hitsByIp.get(ip) || 0) + 1);
-    if (!firstByIp.has(ip)) firstByIp.set(ip, row);
+    const key = visitorKey(row) || `row:${firstByVisitor.size}`;
+    hitsByVisitor.set(key, (hitsByVisitor.get(key) || 0) + 1);
+    if (!firstByVisitor.has(key)) firstByVisitor.set(key, row);
+
+    const asKey = `${row.country ?? ''}\0${row.as_org ?? ''}`;
+    let rec = countryAs.get(asKey);
+    if (!rec) {
+      rec = { country: row.country || '', as_org: row.as_org || '', unique: 0, hits: 0 };
+      countryAs.set(asKey, rec);
+    }
+    rec.hits += 1;
+    const visitorAsKey = `${asKey}\0${key}`;
+    if (!countryAsVisitors.has(visitorAsKey)) {
+      countryAsVisitors.add(visitorAsKey);
+      rec.unique += 1;
+    }
   }
 
   let returning = 0;
   let newCount = 0;
-  for (const ip of firstByIp.keys()) {
-    const firstMs = tsMillis(firstSeenMap.get(ip));
+  for (const key of firstByVisitor.keys()) {
+    const firstMs = tsMillis(firstSeenMap.get(key));
     if (firstMs != null && windowStartMs != null && firstMs < windowStartMs) returning += 1;
     else newCount += 1;
   }
 
-  const unique = firstByIp.size;
-  const prevUnique = uniqueIps(prevPeople).size;
+  const unique = firstByVisitor.size;
+  const prevUnique = uniqueKeys(prevPeople).size;
   const returningPct = unique ? Math.round((returning / unique) * 100) : 0;
 
   let one = 0;
   let twoToFour = 0;
   let fivePlus = 0;
-  for (const n of hitsByIp.values()) {
+  for (const n of hitsByVisitor.values()) {
     if (n === 1) one += 1;
     else if (n <= 4) twoToFour += 1;
     else fivePlus += 1;
   }
 
-  const countryAs = new Map();
-  const countryAsIps = new Set();
-  for (const row of people) {
-    const key = `${row.country ?? ''}\0${row.as_org ?? ''}`;
-    let rec = countryAs.get(key);
-    if (!rec) {
-      rec = { country: row.country || '', as_org: row.as_org || '', unique: 0, hits: 0 };
-      countryAs.set(key, rec);
-    }
-    rec.hits += 1;
-    const ipKey = `${key}\0${row.ip ?? ''}`;
-    if (!countryAsIps.has(ipKey)) {
-      countryAsIps.add(ipKey);
-      rec.unique += 1;
-    }
-  }
   const byCountryAsOrg = [...countryAs.values()].sort((a, b) => b.unique - a.unique || b.hits - a.hits);
 
   const deviceCounts = new Map();
   const referrerCounts = new Map();
-  for (const row of firstByIp.values()) {
+  for (const row of firstByVisitor.values()) {
     const family = deviceFamily(row.ua);
     deviceCounts.set(family, (deviceCounts.get(family) || 0) + 1);
     const bucket = referrerBucket(row.referer);
@@ -261,7 +287,7 @@ export function assembleReport(input) {
       returning,
       newCount,
       returningPct,
-      cloudDroppedUnique: uniqueIps(cloud).size,
+      cloudDroppedUnique: uniqueKeys(cloud).size,
     },
     footnote2xx: {
       requests: Number(input.totals2xx?.requests ?? 0),
@@ -278,8 +304,9 @@ export function assembleReport(input) {
       redirects: Number(input.redirectTotal ?? 0),
       faviconRobots: Number(input.faviconRobotsTotal ?? 0),
       probes: Number(input.probeTotal ?? 0),
-      cloud2xx: uniqueIps(cloud).size,
+      cloud2xx: uniqueKeys(cloud).size,
     },
+    events: countEvents(input.eventRows),
     appendix: {
       redirects: input.redirects ?? [],
       faviconRobots: input.faviconRobots ?? [],
@@ -303,6 +330,7 @@ export function fetchReportData(hours, queryFn = d1Query) {
     peopleCandidates: queryFn(q.peopleCandidates),
     prevPeopleCandidates: queryFn(q.prevPeopleCandidates),
     firstSeen: queryFn(q.firstSeen),
+    eventRows: queryFn(q.eventRows),
     totals2xx: queryFn(q.totals2xx)[0] ?? {},
     byColo: queryFn(q.byColo),
     byStatus: queryFn(q.byStatus),

@@ -55,6 +55,7 @@ const BY_DEVICE = ${js(data.byDevice ?? [])};
 const BY_REFERRER = ${js(data.byReferrer ?? [])};
 const BY_HOUR_ET = ${js(data.byHourEt ?? [])};
 const REPEATS = ${js(data.repeats ?? {})};
+const EVENTS = ${js(data.events ?? {})};
 const NOISE = ${js(data.noise ?? {})};
 const REDIRECTS = ${js(data.appendix?.redirects ?? [])};
 const FAVICON_ROBOTS = ${js(data.appendix?.faviconRobots ?? [])};
@@ -92,6 +93,11 @@ export default function VisitLog${titleSuffix}Report() {
             ["Returning", \`\${PEOPLE.returning ?? 0} (\${PEOPLE.returningPct ?? 0}%)\`],
             ["New", String(PEOPLE.newCount ?? 0)],
             ["Repeat 1 / 2–4 / 5+", \`\${REPEATS.one ?? 0} / \${REPEATS.twoToFour ?? 0} / \${REPEATS.fivePlus ?? 0}\`],
+            ["Page views", String(EVENTS.view ?? 0)],
+            ["LinkedIn", String(EVENTS.linkedin ?? 0)],
+            ["mailto", String(EVENTS.mailto ?? 0)],
+            ["Bio rolls", String(EVENTS.bio ?? 0)],
+            ["Dwell (median ms)", EVENTS.dwellMedianMs == null ? String(EVENTS.dwell ?? 0) : \`\${EVENTS.dwell ?? 0} / \${EVENTS.dwellMedianMs}\`],
           ]}
           columnAlign={["left", "right"]}
         />
