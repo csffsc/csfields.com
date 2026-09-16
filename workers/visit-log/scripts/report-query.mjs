@@ -1,8 +1,27 @@
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  PEOPLE_SQL,
+  deviceFamily,
+  hourInEastern,
+  isCloudAsOrg,
+  parseVisitTs,
+  referrerBucket,
+} from './people-filter.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+const FAVICON_ROBOTS_PATHS = [
+  '/favicon.ico',
+  '/favicon.svg',
+  '/apple-touch-icon.png',
+  '/apple-touch-icon-precomposed.png',
+  '/robots.txt',
+  '/sitemap.xml',
+];
+
+const FAVICON_ROBOTS_SQL = FAVICON_ROBOTS_PATHS.map((p) => `'${p}'`).join(', ');
 
 /** @param {string} sql */
 export function d1Query(sql) {
@@ -36,76 +55,262 @@ export function windowClause(hours) {
 
 /**
  * @param {number} hours
+ * @returns {string}
  */
-export function fetchReportData(hours) {
+export function previousWindowClause(hours) {
+  return `ts >= datetime('now', '-${hours * 2} hours') AND ts < datetime('now', '-${hours} hours')`;
+}
+
+function probeWhere(windowSql) {
+  return `${windowSql}
+    AND path NOT IN (${FAVICON_ROBOTS_SQL})
+    AND (status IS NULL OR status < 200 OR status >= 400 OR bot_guess = 1
+         OR path LIKE '%.php%' OR path LIKE '/wp-%' OR path LIKE '%.env%')
+    AND (status IS NULL OR status < 300 OR status >= 400)`;
+}
+
+/**
+ * @param {number} hours
+ */
+export function buildReportQueries(hours) {
   const w = windowClause(hours);
-  const w2xx = `${w} AND status BETWEEN 200 AND 299`;
-
-  const totals = d1Query(
-    `SELECT COUNT(*) AS requests, COUNT(DISTINCT ip) AS unique_ips, COUNT(DISTINCT path) AS unique_paths,
-            SUM(CASE WHEN bot_guess = 0 THEN 1 ELSE 0 END) AS human,
-            SUM(CASE WHEN bot_guess = 1 THEN 1 ELSE 0 END) AS bot
-     FROM visits WHERE ${w2xx}`
-  )[0];
-
-  const bounds = d1Query(
-    `SELECT MIN(ts) AS earliest, MAX(ts) AS latest FROM visits WHERE ${w2xx}`
-  )[0];
-
-  const byCountry = d1Query(
-    `SELECT country, COUNT(*) AS n FROM visits WHERE ${w2xx}
-     GROUP BY country ORDER BY n DESC LIMIT 15`
-  );
-
-  const byColo = d1Query(
-    `SELECT colo, COUNT(*) AS n FROM visits WHERE ${w2xx}
-     GROUP BY colo ORDER BY n DESC LIMIT 10`
-  );
-
-  const byPath = d1Query(
-    `SELECT path, COUNT(*) AS n FROM visits WHERE ${w2xx}
-     GROUP BY path ORDER BY n DESC LIMIT 15`
-  );
-
-  const capture = d1Query(
-    `SELECT SUM(CASE WHEN cookie IS NOT NULL AND cookie != '' THEN 1 ELSE 0 END) AS with_cookie,
-            SUM(CASE WHEN body IS NOT NULL AND body != '' THEN 1 ELSE 0 END) AS with_body,
-            SUM(CASE WHEN query IS NOT NULL AND query != '' THEN 1 ELSE 0 END) AS with_query,
-            COUNT(*) AS total
-     FROM visits WHERE ${w2xx}`
-  )[0];
-
-  const probeFilter = `${w} AND (
-    status IS NULL OR status < 200 OR status >= 300
-    OR bot_guess = 1 OR path LIKE '%.php%' OR path LIKE '/wp-%'
-  )`;
-
-  const probeTotals = d1Query(
-    `SELECT COUNT(*) AS n FROM visits WHERE ${probeFilter}`
-  )[0];
-
-  const byStatus = d1Query(
-    `SELECT status, COUNT(*) AS n FROM visits WHERE ${probeFilter}
-     GROUP BY status ORDER BY n DESC LIMIT 15`
-  );
-
-  const probePaths = d1Query(
-    `SELECT path, COUNT(*) AS n FROM visits WHERE ${probeFilter}
-     GROUP BY path ORDER BY n DESC LIMIT 15`
-  );
+  const prev = previousWindowClause(hours);
+  const peopleWindow = `${w} AND ${PEOPLE_SQL}`;
+  const prevPeople = `${prev} AND ${PEOPLE_SQL}`;
 
   return {
-    hours,
-    totals,
-    bounds,
-    byCountry,
-    byColo,
-    byPath,
-    capture,
+    bounds: `SELECT datetime('now', '-${hours} hours') AS start,
+                    datetime('now') AS end,
+                    datetime('now', '-${hours * 2} hours') AS prev_start`,
+    peopleCandidates: `SELECT ip, as_org, country, referer, ua, ts
+       FROM visits WHERE ${peopleWindow}`,
+    prevPeopleCandidates: `SELECT ip, as_org, country, referer, ua, ts
+       FROM visits WHERE ${prevPeople}`,
+    firstSeen: `SELECT ip, MIN(ts) AS first_seen
+       FROM visits
+       WHERE ${PEOPLE_SQL}
+         AND ip IN (SELECT DISTINCT ip FROM visits WHERE ${peopleWindow})
+       GROUP BY ip`,
+    totals2xx: `SELECT COUNT(*) AS requests, COUNT(DISTINCT ip) AS unique_ips,
+            SUM(CASE WHEN bot_guess = 0 THEN 1 ELSE 0 END) AS human,
+            SUM(CASE WHEN bot_guess = 1 THEN 1 ELSE 0 END) AS bot
+     FROM visits WHERE ${w} AND status BETWEEN 200 AND 299`,
+    byColo: `SELECT colo, COUNT(*) AS n FROM visits
+     WHERE ${w} AND status BETWEEN 200 AND 299
+     GROUP BY colo ORDER BY n DESC LIMIT 10`,
+    byStatus: `SELECT status, COUNT(*) AS n FROM visits
+     WHERE ${w} AND (status IS NULL OR status < 200 OR status >= 300 OR bot_guess = 1)
+     GROUP BY status ORDER BY n DESC LIMIT 15`,
+    redirects: `SELECT path, status, COUNT(*) AS n FROM visits
+     WHERE ${w} AND status BETWEEN 300 AND 399
+     GROUP BY path, status ORDER BY n DESC LIMIT 15`,
+    redirectTotal: `SELECT COUNT(*) AS n FROM visits
+     WHERE ${w} AND status BETWEEN 300 AND 399`,
+    faviconRobots: `SELECT path, status, COUNT(*) AS n FROM visits
+     WHERE ${w} AND path IN (${FAVICON_ROBOTS_SQL})
+     GROUP BY path, status ORDER BY n DESC LIMIT 15`,
+    faviconRobotsTotal: `SELECT COUNT(*) AS n FROM visits
+     WHERE ${w} AND path IN (${FAVICON_ROBOTS_SQL})`,
+    probes: `SELECT path, COUNT(*) AS n FROM visits
+     WHERE ${probeWhere(w)}
+     GROUP BY path ORDER BY n DESC LIMIT 15`,
+    probeTotal: `SELECT COUNT(*) AS n FROM visits WHERE ${probeWhere(w)}`,
+  };
+}
+
+/** @param {string | null | undefined} ts */
+function tsMillis(ts) {
+  const date = parseVisitTs(ts);
+  return date ? date.getTime() : null;
+}
+
+function uniqueIps(rows) {
+  const set = new Set();
+  for (const row of rows) {
+    if (row.ip) set.add(row.ip);
+  }
+  return set;
+}
+
+function countMapToList(map, keyName) {
+  return [...map.entries()]
+    .map(([key, n]) => ({ [keyName]: key, n }))
+    .sort((a, b) => b.n - a.n);
+}
+
+/**
+ * @param {{
+ *   hours: number,
+ *   bounds: { start?: string, end?: string, prev_start?: string },
+ *   peopleCandidates?: object[],
+ *   prevPeopleCandidates?: object[],
+ *   firstSeen?: { ip: string, first_seen: string }[],
+ *   totals2xx?: object,
+ *   byColo?: object[],
+ *   byStatus?: object[],
+ *   redirects?: object[],
+ *   faviconRobots?: object[],
+ *   probes?: object[],
+ *   redirectTotal?: number,
+ *   faviconRobotsTotal?: number,
+ *   probeTotal?: number,
+ * }} input
+ */
+export function assembleReport(input) {
+  const people = (input.peopleCandidates ?? []).filter((row) => !isCloudAsOrg(row.as_org));
+  const cloud = (input.peopleCandidates ?? []).filter((row) => isCloudAsOrg(row.as_org));
+  const prevPeople = (input.prevPeopleCandidates ?? []).filter(
+    (row) => !isCloudAsOrg(row.as_org)
+  );
+
+  const windowStartMs = tsMillis(input.bounds?.start);
+  const firstSeenMap = new Map(
+    (input.firstSeen ?? []).map((row) => [row.ip, row.first_seen])
+  );
+
+  const sortedPeople = [...people].sort((a, b) => (tsMillis(a.ts) ?? 0) - (tsMillis(b.ts) ?? 0));
+  const firstByIp = new Map();
+  const hitsByIp = new Map();
+  for (const row of sortedPeople) {
+    const ip = row.ip || '';
+    hitsByIp.set(ip, (hitsByIp.get(ip) || 0) + 1);
+    if (!firstByIp.has(ip)) firstByIp.set(ip, row);
+  }
+
+  let returning = 0;
+  let newCount = 0;
+  for (const ip of firstByIp.keys()) {
+    const firstMs = tsMillis(firstSeenMap.get(ip));
+    if (firstMs != null && windowStartMs != null && firstMs < windowStartMs) returning += 1;
+    else newCount += 1;
+  }
+
+  const unique = firstByIp.size;
+  const prevUnique = uniqueIps(prevPeople).size;
+  const returningPct = unique ? Math.round((returning / unique) * 100) : 0;
+
+  let one = 0;
+  let twoToFour = 0;
+  let fivePlus = 0;
+  for (const n of hitsByIp.values()) {
+    if (n === 1) one += 1;
+    else if (n <= 4) twoToFour += 1;
+    else fivePlus += 1;
+  }
+
+  const countryAs = new Map();
+  const countryAsIps = new Set();
+  for (const row of people) {
+    const key = `${row.country ?? ''}\0${row.as_org ?? ''}`;
+    let rec = countryAs.get(key);
+    if (!rec) {
+      rec = { country: row.country || '', as_org: row.as_org || '', unique: 0, hits: 0 };
+      countryAs.set(key, rec);
+    }
+    rec.hits += 1;
+    const ipKey = `${key}\0${row.ip ?? ''}`;
+    if (!countryAsIps.has(ipKey)) {
+      countryAsIps.add(ipKey);
+      rec.unique += 1;
+    }
+  }
+  const byCountryAsOrg = [...countryAs.values()].sort((a, b) => b.unique - a.unique || b.hits - a.hits);
+
+  const deviceCounts = new Map();
+  const referrerCounts = new Map();
+  for (const row of firstByIp.values()) {
+    const family = deviceFamily(row.ua);
+    deviceCounts.set(family, (deviceCounts.get(family) || 0) + 1);
+    const bucket = referrerBucket(row.referer);
+    referrerCounts.set(bucket, (referrerCounts.get(bucket) || 0) + 1);
+  }
+
+  const hourCounts = new Map();
+  let earliestMs = null;
+  let latestMs = null;
+  let earliestTs = null;
+  let latestTs = null;
+  for (const row of people) {
+    const hour = hourInEastern(row.ts);
+    if (hour != null) hourCounts.set(hour, (hourCounts.get(hour) || 0) + 1);
+    const ms = tsMillis(row.ts);
+    if (ms == null) continue;
+    if (earliestMs == null || ms < earliestMs) {
+      earliestMs = ms;
+      earliestTs = row.ts;
+    }
+    if (latestMs == null || ms > latestMs) {
+      latestMs = ms;
+      latestTs = row.ts;
+    }
+  }
+
+  return {
+    hours: input.hours,
+    bounds: {
+      start: input.bounds?.start,
+      end: input.bounds?.end,
+      earliest: earliestTs,
+      latest: latestTs,
+    },
+    people: {
+      unique,
+      hits: people.length,
+      prevUnique,
+      delta: unique - prevUnique,
+      returning,
+      newCount,
+      returningPct,
+      cloudDroppedUnique: uniqueIps(cloud).size,
+    },
+    footnote2xx: {
+      requests: Number(input.totals2xx?.requests ?? 0),
+      unique_ips: Number(input.totals2xx?.unique_ips ?? 0),
+      human: Number(input.totals2xx?.human ?? 0),
+      bot: Number(input.totals2xx?.bot ?? 0),
+    },
+    byCountryAsOrg,
+    byDevice: countMapToList(deviceCounts, 'family'),
+    byReferrer: countMapToList(referrerCounts, 'bucket'),
+    byHourEt: countMapToList(hourCounts, 'hour'),
+    repeats: { one, twoToFour, fivePlus },
+    noise: {
+      redirects: Number(input.redirectTotal ?? 0),
+      faviconRobots: Number(input.faviconRobotsTotal ?? 0),
+      probes: Number(input.probeTotal ?? 0),
+      cloud2xx: uniqueIps(cloud).size,
+    },
     appendix: {
-      probeTotals,
-      byStatus,
-      probePaths,
+      redirects: input.redirects ?? [],
+      faviconRobots: input.faviconRobots ?? [],
+      probes: input.probes ?? [],
+      byStatus: input.byStatus ?? [],
+      byColo: input.byColo ?? [],
     },
   };
+}
+
+/**
+ * @param {number} hours
+ * @param {(sql: string) => unknown[]} [queryFn]
+ */
+export function fetchReportData(hours, queryFn = d1Query) {
+  const q = buildReportQueries(hours);
+  const bounds = queryFn(q.bounds)[0] ?? {};
+  return assembleReport({
+    hours,
+    bounds,
+    peopleCandidates: queryFn(q.peopleCandidates),
+    prevPeopleCandidates: queryFn(q.prevPeopleCandidates),
+    firstSeen: queryFn(q.firstSeen),
+    totals2xx: queryFn(q.totals2xx)[0] ?? {},
+    byColo: queryFn(q.byColo),
+    byStatus: queryFn(q.byStatus),
+    redirects: queryFn(q.redirects),
+    faviconRobots: queryFn(q.faviconRobots),
+    probes: queryFn(q.probes),
+    redirectTotal: Number(queryFn(q.redirectTotal)[0]?.n ?? 0),
+    faviconRobotsTotal: Number(queryFn(q.faviconRobotsTotal)[0]?.n ?? 0),
+    probeTotal: Number(queryFn(q.probeTotal)[0]?.n ?? 0),
+  });
 }
