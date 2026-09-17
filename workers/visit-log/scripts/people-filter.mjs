@@ -79,6 +79,14 @@ export function median(values) {
   return Math.round((sorted[mid - 1] + sorted[mid]) / 2);
 }
 
+/** First tag from Accept-Language, without q-weight. */
+export function primaryLanguage(acceptLanguage) {
+  if (acceptLanguage == null) return '';
+  const first = String(acceptLanguage).split(',')[0].trim();
+  if (!first) return '';
+  return first.replace(/;.*$/, '').trim();
+}
+
 /** @param {string | null | undefined} asOrg */
 export function isCloudAsOrg(asOrg) {
   if (asOrg == null || asOrg === '') return false;

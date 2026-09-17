@@ -56,6 +56,8 @@ const BY_REFERRER = ${js(data.byReferrer ?? [])};
 const BY_HOUR_ET = ${js(data.byHourEt ?? [])};
 const REPEATS = ${js(data.repeats ?? {})};
 const EVENTS = ${js(data.events ?? {})};
+const CAPTURE = ${js(data.capture ?? {})};
+const BY_LANGUAGE = ${js(data.byLanguage ?? [])};
 const NOISE = ${js(data.noise ?? {})};
 const REDIRECTS = ${js(data.appendix?.redirects ?? [])};
 const FAVICON_ROBOTS = ${js(data.appendix?.faviconRobots ?? [])};
@@ -99,6 +101,21 @@ export default function VisitLog${titleSuffix}Report() {
             ["Bio rolls", String(EVENTS.bio ?? 0)],
             ["Dwell (median ms)", EVENTS.dwellMedianMs == null ? String(EVENTS.dwell ?? 0) : \`\${EVENTS.dwell ?? 0} / \${EVENTS.dwellMedianMs}\`],
           ]}
+          columnAlign={["left", "right"]}
+        />
+        <Table
+          headers={["Capture mix (people rows)", "Count", "Share"]}
+          rows={[
+            ["Inbound cookie", String(CAPTURE.withCookie ?? 0), \`\${CAPTURE.cookiePct ?? 0}%\`],
+            ["vid", String(CAPTURE.withVid ?? 0), \`\${CAPTURE.vidPct ?? 0}%\`],
+            ["JS-on (/e view)", String(CAPTURE.withView ?? 0), \`\${CAPTURE.viewPct ?? 0}%\`],
+            ["GET-only", String(CAPTURE.getOnly ?? 0), \`\${CAPTURE.getOnlyPct ?? 0}%\`],
+          ]}
+          columnAlign={["left", "right", "right"]}
+        />
+        <Table
+          headers={["Accept-Language", "Visits"]}
+          rows={BY_LANGUAGE.map((r) => [r.language || "(blank)", String(r.n)])}
           columnAlign={["left", "right"]}
         />
         <Table

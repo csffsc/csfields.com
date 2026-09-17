@@ -21,6 +21,21 @@ const data = {
     returningPct: 33,
     cloudDroppedUnique: 5,
   },
+  capture: {
+    rows: 20,
+    withCookie: 15,
+    withVid: 12,
+    withView: 8,
+    getOnly: 12,
+    cookiePct: 75,
+    vidPct: 60,
+    viewPct: 40,
+    getOnlyPct: 60,
+  },
+  byLanguage: [
+    { language: 'en-US', n: 14 },
+    { language: 'de-DE', n: 4 },
+  ],
   footnote2xx: { requests: 381, unique_ips: 207, human: 326, bot: 55 },
   byCountryAsOrg: [{ country: 'US', as_org: 'Comcast Cable', unique: 8, hits: 14 }],
   byDevice: [{ family: 'Mac', n: 7 }],
@@ -57,6 +72,12 @@ describe('renderCanvasSource', () => {
     expect(source).toMatch(/2–4|2-4/);
     expect(source).toMatch(/linkedin/i);
     expect(source).toMatch(/mailto/i);
+    expect(source).toMatch(/Inbound cookie/i);
+    expect(source).toMatch(/GET-only/i);
+    expect(source).toMatch(/JS-on/i);
+    expect(source).toMatch(/en-US/);
+    expect(source).toMatch(/Accept-Language|language/i);
+    expect(source).not.toMatch(/uniqueness|canvas hash|webgl/i);
   });
 
   it('keeps colo, status, and split probe tables underneath', () => {

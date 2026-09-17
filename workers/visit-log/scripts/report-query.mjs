@@ -12,6 +12,7 @@ import {
   referrerBucket,
   visitorKey,
   ipToVidFromRows,
+  primaryLanguage,
 } from './people-filter.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -113,12 +114,12 @@ export function buildReportQueries(hours, opts = {}) {
     bounds: `SELECT datetime('now', '-${hours} hours') AS start,
                     datetime('now') AS end,
                     datetime('now', '-${hours * 2} hours') AS prev_start`,
-    peopleCandidates: `SELECT ${visitorCols}, as_org, country, referer, ua, ts
+    peopleCandidates: `SELECT ${visitorCols}, as_org, country, referer, ua, ts, cookie, accept_language
        FROM visits WHERE ${peopleWindow}`,
-    prevPeopleCandidates: `SELECT ${visitorCols}, as_org, country, referer, ua, ts
+    prevPeopleCandidates: `SELECT ${visitorCols}, as_org, country, referer, ua, ts, cookie, accept_language
        FROM visits WHERE ${prevPeople}`,
     firstSeen,
-    eventRows: `SELECT query FROM visits WHERE ${w} AND path = '/e'`,
+    eventRows: `SELECT ${visitorCols}, query FROM visits WHERE ${w} AND path = '/e'`,
     totals2xx: `SELECT COUNT(*) AS requests, COUNT(DISTINCT ip) AS unique_ips,
             SUM(CASE WHEN bot_guess = 0 THEN 1 ELSE 0 END) AS human,
             SUM(CASE WHEN bot_guess = 1 THEN 1 ELSE 0 END) AS bot
@@ -176,6 +177,55 @@ function countEvents(eventRows) {
     if (parsed.name === 'dwell' && parsed.ms != null) dwellMs.push(parsed.ms);
   }
   return { ...counts, dwellMedianMs: median(dwellMs) };
+}
+
+function nonempty(value) {
+  return value != null && String(value).trim() !== '';
+}
+
+function sharePct(n, total) {
+  if (!total) return 0;
+  return Math.round((Number(n) / total) * 100);
+}
+
+function captureMix(people, eventRows, identityRows) {
+  const captureIpToVid = ipToVidFromRows(identityRows);
+  const viewKeys = new Set();
+  for (const row of eventRows ?? []) {
+    if (parseEventQuery(row.query).name !== 'view') continue;
+    const key = visitorKey(row, captureIpToVid);
+    if (key) viewKeys.add(key);
+  }
+
+  let withCookie = 0;
+  let withVid = 0;
+  let withView = 0;
+  const languageCounts = new Map();
+  for (const row of people) {
+    if (nonempty(row.cookie)) withCookie += 1;
+    if (nonempty(row.vid)) withVid += 1;
+    const key = visitorKey(row, captureIpToVid);
+    if (key && viewKeys.has(key)) withView += 1;
+    const language = primaryLanguage(row.accept_language);
+    if (language) languageCounts.set(language, (languageCounts.get(language) || 0) + 1);
+  }
+
+  const rows = people.length;
+  const getOnly = rows - withView;
+  return {
+    capture: {
+      rows,
+      withCookie,
+      withVid,
+      withView,
+      getOnly,
+      cookiePct: sharePct(withCookie, rows),
+      vidPct: sharePct(withVid, rows),
+      viewPct: sharePct(withView, rows),
+      getOnlyPct: sharePct(getOnly, rows),
+    },
+    byLanguage: countMapToList(languageCounts, 'language'),
+  };
 }
 
 /**
@@ -296,6 +346,12 @@ export function assembleReport(input) {
     }
   }
 
+  const mix = captureMix(people, input.eventRows, [
+    ...(input.peopleCandidates ?? []),
+    ...(input.prevPeopleCandidates ?? []),
+    ...(input.eventRows ?? []),
+  ]);
+
   return {
     hours: input.hours,
     bounds: {
@@ -332,6 +388,8 @@ export function assembleReport(input) {
       cloud2xx: uniqueKeys(cloud, ipToVid).size,
     },
     events: countEvents(input.eventRows),
+    capture: mix.capture,
+    byLanguage: mix.byLanguage,
     appendix: {
       redirects: input.redirects ?? [],
       faviconRobots: input.faviconRobots ?? [],

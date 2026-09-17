@@ -21,6 +21,21 @@ const data = {
     returningPct: 33,
     cloudDroppedUnique: 5,
   },
+  capture: {
+    rows: 20,
+    withCookie: 15,
+    withVid: 12,
+    withView: 8,
+    getOnly: 12,
+    cookiePct: 75,
+    vidPct: 60,
+    viewPct: 40,
+    getOnlyPct: 60,
+  },
+  byLanguage: [
+    { language: 'en-US', n: 14 },
+    { language: 'de-DE', n: 4 },
+  ],
   footnote2xx: { requests: 381, unique_ips: 207, human: 326, bot: 55 },
   byCountryAsOrg: [
     { country: 'US', as_org: 'Comcast Cable', unique: 8, hits: 14 },
@@ -82,6 +97,13 @@ describe('buildHtml', () => {
     expect(html).toMatch(/mailto/i);
     expect(html).toMatch(/dwell/i);
     expect(html).toMatch(/18000|18s|18,000/);
+    expect(html).toMatch(/Inbound cookie/i);
+    expect(html).toMatch(/75%/);
+    expect(html).toMatch(/GET-only/i);
+    expect(html).toMatch(/JS-on/i);
+    expect(html).toMatch(/en-US/);
+    expect(html).toMatch(/Accept-Language|language/i);
+    expect(html).not.toMatch(/uniqueness|bits of identifying|canvas hash|webgl/i);
   });
 
   it('HTML-escapes paths and never interpolates raw IPs', () => {

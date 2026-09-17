@@ -105,6 +105,17 @@ describe('buildReportQueries', () => {
     expect(queries.peopleCandidates).not.toMatch(/\bvid\b/);
     expect(queries.firstSeen).toMatch(/GROUP BY ip/);
     expect(queries.eventRows).toMatch(/path = '\/e'/);
+    expect(queries.eventRows).toMatch(/\bip\b/);
+    expect(queries.eventRows).not.toMatch(/\bvid\b/);
+  });
+
+  it('selects cookie, accept_language, and event identity for the capture mix', () => {
+    const queries = buildReportQueries(168);
+    expect(queries.peopleCandidates).toMatch(/\bcookie\b/);
+    expect(queries.peopleCandidates).toMatch(/\baccept_language\b/);
+    expect(queries.eventRows).toMatch(/\bip\b/);
+    expect(queries.eventRows).toMatch(/\bvid\b/);
+    expect(queries.eventRows).toMatch(/\bquery\b/);
   });
 
   it('does not query unused capture columns', () => {
@@ -316,6 +327,120 @@ describe('assembleReport', () => {
     expect(data.people.unique).toBe(2);
     expect(data.people.returning).toBe(1);
     expect(data.people.newCount).toBe(1);
+    expect(JSON.stringify(data)).not.toMatch(IPV4);
+  });
+
+  it('summarizes cookie, vid, JS-on view match, and top languages among people rows', () => {
+    const data = assembleReport({
+      hours: 168,
+      bounds: { start: '2026-09-09 16:00:00', end: '2026-09-16 16:00:00' },
+      peopleCandidates: [
+        {
+          ip: '203.0.113.1',
+          vid: 'v1',
+          cookie: 'vid=v1',
+          accept_language: 'en-US,en;q=0.9',
+          as_org: 'Comcast Cable',
+          country: 'US',
+          referer: '',
+          ua: MAC_UA,
+          ts: '2026-09-16T16:00:00.000Z',
+        },
+        {
+          ip: '203.0.113.1',
+          vid: 'v1',
+          cookie: 'vid=v1',
+          accept_language: 'en-US,en;q=0.9',
+          as_org: 'Comcast Cable',
+          country: 'US',
+          referer: '',
+          ua: MAC_UA,
+          ts: '2026-09-16T17:00:00.000Z',
+        },
+        {
+          ip: '203.0.113.2',
+          vid: 'v2',
+          cookie: 'vid=v2',
+          accept_language: 'en-US',
+          as_org: 'Comcast Cable',
+          country: 'US',
+          referer: '',
+          ua: MAC_UA,
+          ts: '2026-09-16T16:30:00.000Z',
+        },
+        {
+          ip: '203.0.113.3',
+          vid: '',
+          cookie: '',
+          accept_language: 'de-DE,de;q=0.8',
+          as_org: 'Comcast Cable',
+          country: 'US',
+          referer: '',
+          ua: MAC_UA,
+          ts: '2026-09-16T18:00:00.000Z',
+        },
+        {
+          ip: '203.0.113.9',
+          vid: 'cloud',
+          cookie: 'vid=cloud',
+          accept_language: 'fr',
+          as_org: 'DigitalOcean, LLC',
+          country: 'US',
+          referer: '',
+          ua: MAC_UA,
+          ts: '2026-09-16T16:45:00.000Z',
+        },
+      ],
+      eventRows: [
+        { ip: '203.0.113.1', vid: 'v1', query: 'n=view' },
+        { ip: '203.0.113.2', vid: 'v2', query: 'n=linkedin' },
+        { ip: '203.0.113.9', vid: 'cloud', query: 'n=view' },
+      ],
+      totals2xx: { requests: 5, unique_ips: 4, human: 5, bot: 0 },
+    });
+    expect(data.capture).toEqual({
+      rows: 4,
+      withCookie: 3,
+      withVid: 3,
+      withView: 2,
+      getOnly: 2,
+      cookiePct: 75,
+      vidPct: 75,
+      viewPct: 50,
+      getOnlyPct: 50,
+    });
+    expect(data.byLanguage).toEqual([
+      { language: 'en-US', n: 3 },
+      { language: 'de-DE', n: 1 },
+    ]);
+    expect(JSON.stringify(data)).not.toMatch(IPV4);
+    expect(JSON.stringify(data)).not.toMatch(/uniqueness|canvas|webgl|font/i);
+  });
+
+  it('matches a GET-only people row to a later /e view on the same IP', () => {
+    const data = assembleReport({
+      hours: 168,
+      bounds: { start: '2026-09-09 16:00:00', end: '2026-09-16 16:00:00' },
+      peopleCandidates: [
+        {
+          ip: '203.0.113.5',
+          vid: '',
+          cookie: '',
+          accept_language: 'en',
+          as_org: 'Comcast Cable',
+          country: 'US',
+          referer: '',
+          ua: MAC_UA,
+          ts: '2026-09-16T16:00:00.000Z',
+        },
+      ],
+      eventRows: [{ ip: '203.0.113.5', vid: 'late-cookie', query: 'n=view' }],
+      totals2xx: { requests: 1, unique_ips: 1, human: 1, bot: 0 },
+    });
+    expect(data.capture.withCookie).toBe(0);
+    expect(data.capture.withVid).toBe(0);
+    expect(data.capture.withView).toBe(1);
+    expect(data.capture.getOnly).toBe(0);
     expect(JSON.stringify(data)).not.toMatch(IPV4);
   });
 });

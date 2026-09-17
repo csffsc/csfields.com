@@ -31,6 +31,7 @@ function rowsOrEmpty(html, colspan) {
  */
 export function buildHtml({ periodLabel, runDate, data, canvasName }) {
   const people = data.people ?? {};
+  const capture = data.capture ?? {};
   const footnote = data.footnote2xx ?? {};
   const noise = data.noise ?? {};
   const repeats = data.repeats ?? {};
@@ -62,6 +63,13 @@ export function buildHtml({ periodLabel, runDate, data, canvasName }) {
     .map(
       (r) =>
         `<tr><td>${escapeHtml(r.bucket)}</td><td align="right">${r.n}</td><td align="right">${pct(r.n, unique)}</td></tr>`
+    )
+    .join('');
+
+  const languageRows = (data.byLanguage ?? [])
+    .map(
+      (r) =>
+        `<tr><td>${escapeHtml(r.language) || '(blank)'}</td><td align="right">${r.n}</td></tr>`
     )
     .join('');
 
@@ -108,6 +116,20 @@ export function buildHtml({ periodLabel, runDate, data, canvasName }) {
     <tr><td>mailto</td><td align="right">${data.events?.mailto ?? 0}</td></tr>
     <tr><td>Bio rolls</td><td align="right">${data.events?.bio ?? 0}</td></tr>
     <tr><td>Dwell</td><td align="right">${data.events?.dwell ?? 0}${data.events?.dwellMedianMs == null ? '' : ` (median ${data.events.dwellMedianMs} ms)`}</td></tr>
+  </table>
+
+  <h3 style="font-weight: normal;">Capture mix (people rows)</h3>
+  <table cellpadding="6" cellspacing="0" border="0">
+    <tr><td>Inbound cookie</td><td align="right">${capture.withCookie ?? 0} (${capture.cookiePct ?? 0}%)</td></tr>
+    <tr><td>vid</td><td align="right">${capture.withVid ?? 0} (${capture.vidPct ?? 0}%)</td></tr>
+    <tr><td>JS-on (/e view)</td><td align="right">${capture.withView ?? 0} (${capture.viewPct ?? 0}%)</td></tr>
+    <tr><td>GET-only</td><td align="right">${capture.getOnly ?? 0} (${capture.getOnlyPct ?? 0}%)</td></tr>
+  </table>
+
+  <h3 style="font-weight: normal;">Accept-Language</h3>
+  <table cellpadding="4" cellspacing="0" border="1" style="border-collapse: collapse; width: 100%; font-size: 14px;">
+    <tr><th align="left">Language</th><th align="right">Visits</th></tr>
+    ${rowsOrEmpty(languageRows, 2)}
   </table>
 
   <h3 style="font-weight: normal;">Country × AS org</h3>

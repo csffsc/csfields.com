@@ -9,6 +9,7 @@ import {
   ipToVidFromRows,
   parseEventQuery,
   median,
+  primaryLanguage,
 } from './people-filter.mjs';
 
 describe('isCloudAsOrg', () => {
@@ -207,5 +208,20 @@ describe('median', () => {
     expect(median([3])).toBe(3);
     expect(median([1, 3, 2])).toBe(2);
     expect(median([1, 2, 3, 4])).toBe(3);
+  });
+});
+
+describe('primaryLanguage', () => {
+  it('takes the first Accept-Language tag and strips q-weights', () => {
+    expect(primaryLanguage('en-US,en;q=0.9')).toBe('en-US');
+    expect(primaryLanguage('de;q=0.8')).toBe('de');
+    expect(primaryLanguage(' fr-CA ;q=0.7, en')).toBe('fr-CA');
+  });
+
+  it('treats missing or blank headers as empty', () => {
+    expect(primaryLanguage('')).toBe('');
+    expect(primaryLanguage(null)).toBe('');
+    expect(primaryLanguage(undefined)).toBe('');
+    expect(primaryLanguage('   ')).toBe('');
   });
 });
