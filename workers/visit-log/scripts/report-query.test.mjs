@@ -241,4 +241,42 @@ describe('assembleReport', () => {
     expect(data.repeats).toEqual({ one: 0, twoToFour: 1, fivePlus: 0 });
     expect(JSON.stringify(data)).not.toMatch(IPV4);
   });
+
+  it('joins historical IP-only people rows to a later vid from the same IP', () => {
+    const data = assembleReport({
+      hours: 168,
+      bounds: { start: '2026-09-09 16:00:00', end: '2026-09-16 16:00:00' },
+      peopleCandidates: [
+        {
+          ip: '203.0.113.40',
+          vid: '',
+          as_org: 'Comcast Cable',
+          country: 'US',
+          referer: '',
+          ua: MAC_UA,
+          ts: '2026-09-10T16:00:00.000Z',
+        },
+        {
+          ip: '203.0.113.40',
+          vid: 'cookie-1',
+          as_org: 'Comcast Cable',
+          country: 'US',
+          referer: '',
+          ua: MAC_UA,
+          ts: '2026-09-16T16:00:00.000Z',
+        },
+      ],
+      firstSeen: [
+        { ip: '203.0.113.40', vid: '', first_seen: '2026-08-01 00:00:00' },
+        { ip: '203.0.113.40', vid: 'cookie-1', first_seen: '2026-09-16T16:00:00.000Z' },
+      ],
+      totals2xx: { requests: 2, unique_ips: 1, human: 2, bot: 0 },
+    });
+    expect(data.people.unique).toBe(1);
+    expect(data.people.hits).toBe(2);
+    expect(data.people.returning).toBe(1);
+    expect(data.people.newCount).toBe(0);
+    expect(data.repeats).toEqual({ one: 0, twoToFour: 1, fivePlus: 0 });
+    expect(JSON.stringify(data)).not.toMatch(IPV4);
+  });
 });

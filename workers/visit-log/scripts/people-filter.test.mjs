@@ -6,6 +6,7 @@ import {
   escapeHtml,
   hourInEastern,
   visitorKey,
+  ipToVidFromRows,
   parseEventQuery,
   median,
 } from './people-filter.mjs';
@@ -177,6 +178,18 @@ describe('visitorKey', () => {
     expect(visitorKey({ vid: 'v1', ip: '203.0.113.9' })).toBe('vid:v1');
     expect(visitorKey({ vid: '', ip: '203.0.113.9' })).toBe('ip:203.0.113.9');
     expect(visitorKey({ ip: '203.0.113.9' })).toBe('ip:203.0.113.9');
+  });
+
+  it('joins an IP-only row to a later vid seen on that IP', () => {
+    const ipToVid = ipToVidFromRows([
+      { ip: '203.0.113.40', vid: '', ts: '2026-08-01T00:00:00.000Z' },
+      { ip: '203.0.113.40', vid: 'cookie-1', ts: '2026-09-16T16:00:00.000Z' },
+    ]);
+    expect(ipToVid.get('203.0.113.40')).toBe('cookie-1');
+    expect(visitorKey({ ip: '203.0.113.40', vid: '' }, ipToVid)).toBe('vid:cookie-1');
+    expect(visitorKey({ ip: '203.0.113.40', vid: 'cookie-1' }, ipToVid)).toBe(
+      'vid:cookie-1'
+    );
   });
 });
 

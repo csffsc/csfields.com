@@ -27,11 +27,37 @@ const SELF_HOSTS = new Set(['csfields.com', 'www.csfields.com']);
 /** People row shared with SQL: status 200 on `/` and not bot_guess. Cloud AS orgs are dropped in JS. */
 export const PEOPLE_SQL = `status = 200 AND path = '/' AND bot_guess = 0`;
 
-/** @param {object} row */
-export function visitorKey(row) {
-  if (row?.vid) return `vid:${row.vid}`;
-  if (row?.ip) return `ip:${row.ip}`;
-  return '';
+/** @param {object | null | undefined} row */
+function rowTimeMs(row) {
+  return parseVisitTs(row?.ts)?.getTime() ?? parseVisitTs(row?.first_seen)?.getTime() ?? 0;
+}
+
+/**
+ * Map IP → later vid seen on that IP so historical IP-only rows join cookied visits.
+ * @param {object[] | null | undefined} rows
+ * @returns {Map<string, string>}
+ */
+export function ipToVidFromRows(rows) {
+  const map = new Map();
+  const sorted = [...(rows ?? [])].sort((a, b) => rowTimeMs(a) - rowTimeMs(b));
+  for (const row of sorted) {
+    const vid = row?.vid == null ? '' : String(row.vid);
+    const ip = row?.ip == null ? '' : String(row.ip);
+    if (vid === '' || ip === '') continue;
+    map.set(ip, vid);
+  }
+  return map;
+}
+
+/** @param {object} row @param {Map<string, string>} [ipToVid] */
+export function visitorKey(row, ipToVid) {
+  const vid = row?.vid == null ? '' : String(row.vid);
+  if (vid !== '') return `vid:${vid}`;
+  const ip = row?.ip == null ? '' : String(row.ip);
+  if (ip === '') return '';
+  const linked = ipToVid?.get(ip);
+  if (linked) return `vid:${linked}`;
+  return `ip:${ip}`;
 }
 
 /** @param {string | null | undefined} query */

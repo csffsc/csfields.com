@@ -11,6 +11,7 @@ import {
   parseVisitTs,
   referrerBucket,
   visitorKey,
+  ipToVidFromRows,
 } from './people-filter.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -151,10 +152,10 @@ function tsMillis(ts) {
   return date ? date.getTime() : null;
 }
 
-function uniqueKeys(rows) {
+function uniqueKeys(rows, ipToVid) {
   const set = new Set();
   for (const row of rows) {
-    const key = visitorKey(row);
+    const key = visitorKey(row, ipToVid);
     if (key) set.add(key);
   }
   return set;
@@ -203,10 +204,21 @@ export function assembleReport(input) {
   );
 
   const windowStartMs = tsMillis(input.bounds?.start);
+  const ipToVid = ipToVidFromRows([
+    ...(input.peopleCandidates ?? []),
+    ...(input.prevPeopleCandidates ?? []),
+    ...(input.firstSeen ?? []),
+  ]);
   const firstSeenMap = new Map();
   for (const row of input.firstSeen ?? []) {
-    const key = visitorKey(row);
-    if (key) firstSeenMap.set(key, row.first_seen);
+    const key = visitorKey(row, ipToVid);
+    if (!key) continue;
+    const prev = firstSeenMap.get(key);
+    const nextMs = tsMillis(row.first_seen);
+    const prevMs = tsMillis(prev);
+    if (prev == null || (nextMs != null && (prevMs == null || nextMs < prevMs))) {
+      firstSeenMap.set(key, row.first_seen);
+    }
   }
 
   const sortedPeople = [...people].sort((a, b) => (tsMillis(a.ts) ?? 0) - (tsMillis(b.ts) ?? 0));
@@ -215,7 +227,7 @@ export function assembleReport(input) {
   const countryAs = new Map();
   const countryAsVisitors = new Set();
   for (const row of sortedPeople) {
-    const key = visitorKey(row) || `row:${firstByVisitor.size}`;
+    const key = visitorKey(row, ipToVid) || `row:${firstByVisitor.size}`;
     hitsByVisitor.set(key, (hitsByVisitor.get(key) || 0) + 1);
     if (!firstByVisitor.has(key)) firstByVisitor.set(key, row);
 
@@ -242,7 +254,7 @@ export function assembleReport(input) {
   }
 
   const unique = firstByVisitor.size;
-  const prevUnique = uniqueKeys(prevPeople).size;
+  const prevUnique = uniqueKeys(prevPeople, ipToVid).size;
   const returningPct = unique ? Math.round((returning / unique) * 100) : 0;
 
   let one = 0;
@@ -301,7 +313,7 @@ export function assembleReport(input) {
       returning,
       newCount,
       returningPct,
-      cloudDroppedUnique: uniqueKeys(cloud).size,
+      cloudDroppedUnique: uniqueKeys(cloud, ipToVid).size,
     },
     footnote2xx: {
       requests: Number(input.totals2xx?.requests ?? 0),
@@ -318,7 +330,7 @@ export function assembleReport(input) {
       redirects: Number(input.redirectTotal ?? 0),
       faviconRobots: Number(input.faviconRobotsTotal ?? 0),
       probes: Number(input.probeTotal ?? 0),
-      cloud2xx: uniqueKeys(cloud).size,
+      cloud2xx: uniqueKeys(cloud, ipToVid).size,
     },
     events: countEvents(input.eventRows),
     appendix: {
