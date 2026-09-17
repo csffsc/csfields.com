@@ -35,11 +35,17 @@ describe('visit-log fetch', () => {
     expect(waitUntil).toHaveBeenCalled();
     await waitUntil.mock.calls[0][0];
     expect(prepare).toHaveBeenCalled();
+    const columns = String(prepare.mock.calls[0][0])
+      .match(/INSERT INTO visits\s*\(([^)]+)\)/i)[1]
+      .split(',')
+      .map((part) => part.trim());
     const bound = bind.mock.calls[0];
-    expect(bound[2]).toBe('abc');
-    expect(bound[5]).toBe('/e');
-    expect(bound[6]).toBe('n=linkedin');
-    expect(bound[7]).toBe(204);
+    expect(bound[columns.indexOf('vid')]).toBe('abc');
+    expect(bound[columns.indexOf('path')]).toBe('/e');
+    expect(bound[columns.indexOf('query')]).toBe('n=linkedin');
+    expect(bound[columns.indexOf('status')]).toBe(204);
+    expect(bound[columns.indexOf('cookie')]).toBe('vid=abc');
+    expect(bound[columns.indexOf('ip')]).toBe('');
   });
 
   it('sets a vid cookie on / 200 when the request has none', async () => {

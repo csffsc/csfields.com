@@ -119,6 +119,9 @@ describe('extractVisit', () => {
     expect(visit.referer).toBe('https://example.com/');
     expect(visit.accept_language).toBe('en-US,en;q=0.9');
     expect(visit.cookie).toBe('a=1; b=2');
+    expect(visit.dnt).toBe('');
+    expect(visit.sec_gpc).toBe('');
+    expect(visit.accept).toBe('');
     expect(visit.content_type).toBe('application/json');
     expect(visit.body).toBe('{"probe":true}');
     expect(visit.body_len).toBe(15);
@@ -187,6 +190,26 @@ describe('extractVisit', () => {
       ts,
     });
     expect(visit.ts).toBe(ts);
+  });
+
+  it('stores DNT, Sec-GPC, and Accept without omitting the row', async () => {
+    const req = fakeRequest({
+      url: 'https://csfields.com/',
+      headers: {
+        'CF-Connecting-IP': '203.0.113.9',
+        Cookie: 'vid=abc-123',
+        DNT: '1',
+        'Sec-GPC': '1',
+        Accept: 'text/html,application/xhtml+xml;q=0.9',
+      },
+    });
+    const visit = await extractVisit(req, { status: 200, bodyText: '<html>', bodyLen: 6 });
+    expect(visit.dnt).toBe('1');
+    expect(visit.sec_gpc).toBe('1');
+    expect(visit.accept).toBe('text/html,application/xhtml+xml;q=0.9');
+    expect(visit.ip).toBe('203.0.113.9');
+    expect(visit.cookie).toBe('vid=abc-123');
+    expect(visit.body).toBe('<html>');
   });
 
   it('parses vid from the Cookie header', async () => {

@@ -13,10 +13,13 @@ const sampleVisit = {
   ua: 'curl/8.0',
   referer: null,
   accept_language: 'en-US',
-  cookie: null,
+  cookie: 'theme=night',
+  dnt: '1',
+  sec_gpc: '1',
+  accept: 'text/html',
   content_type: null,
   body_len: 0,
-  body: null,
+  body: '{"ok":true}',
   country: 'US',
   colo: 'EWR',
   as_org: 'Example ISP',
@@ -26,6 +29,24 @@ const sampleVisit = {
   bot_guess: 1,
   ray: 'abc123-EWR',
 };
+
+function insertColumns(sql) {
+  const match = String(sql).match(/INSERT INTO visits\s*\(([^)]+)\)/i);
+  if (!match) throw new Error(`not an insert: ${sql}`);
+  return match[1].split(',').map((part) => part.trim());
+}
+
+function boundByName(prepareCall, bindCall, name) {
+  const idx = insertColumns(prepareCall[0]).indexOf(name);
+  expect(idx).toBeGreaterThanOrEqual(0);
+  return bindCall[idx];
+}
+
+function expectStoredCore(prepareCall, bindCall) {
+  expect(boundByName(prepareCall, bindCall, 'ip')).toBe(sampleVisit.ip);
+  expect(boundByName(prepareCall, bindCall, 'cookie')).toBe(sampleVisit.cookie);
+  expect(boundByName(prepareCall, bindCall, 'body')).toBe(sampleVisit.body);
+}
 
 describe('persistVisit', () => {
   beforeEach(() => {
@@ -57,35 +78,19 @@ describe('persistVisit', () => {
     await persistVisit(env, sampleVisit);
 
     expect(prepare).toHaveBeenCalledOnce();
-    expect(bind).toHaveBeenCalledWith(
-      sampleVisit.ts,
-      sampleVisit.ip,
-      sampleVisit.vid,
-      sampleVisit.method,
-      sampleVisit.url,
-      sampleVisit.path,
-      sampleVisit.query,
-      sampleVisit.status,
-      sampleVisit.ua,
-      sampleVisit.referer,
-      sampleVisit.accept_language,
-      sampleVisit.cookie,
-      sampleVisit.content_type,
-      sampleVisit.body_len,
-      sampleVisit.body,
-      sampleVisit.country,
-      sampleVisit.colo,
-      sampleVisit.as_org,
-      sampleVisit.tls_version,
-      sampleVisit.bot_score,
-      sampleVisit.verified_bot,
-      sampleVisit.bot_guess,
-      sampleVisit.ray
+    expectStoredCore(prepare.mock.calls[0], bind.mock.calls[0]);
+    expect(boundByName(prepare.mock.calls[0], bind.mock.calls[0], 'vid')).toBe(sampleVisit.vid);
+    expect(boundByName(prepare.mock.calls[0], bind.mock.calls[0], 'dnt')).toBe(sampleVisit.dnt);
+    expect(boundByName(prepare.mock.calls[0], bind.mock.calls[0], 'sec_gpc')).toBe(
+      sampleVisit.sec_gpc
+    );
+    expect(boundByName(prepare.mock.calls[0], bind.mock.calls[0], 'accept')).toBe(
+      sampleVisit.accept
     );
     expect(run).toHaveBeenCalledOnce();
   });
 
-  it('retries without vid when D1 has no vid column and still stores the IP', async () => {
+  it('retries without vid when D1 has no vid column and still stores ip, cookie, and body', async () => {
     const run = vi
       .fn()
       .mockRejectedValueOnce(new Error('D1_ERROR: no such column: vid'))
@@ -96,11 +101,32 @@ describe('persistVisit', () => {
     await persistVisit({ DB: { prepare } }, sampleVisit);
 
     expect(prepare).toHaveBeenCalledTimes(2);
-    expect(prepare.mock.calls[0][0]).toMatch(/\bvid\b/);
-    expect(prepare.mock.calls[1][0]).not.toMatch(/\bvid\b/);
-    expect(bind.mock.calls[1][1]).toBe(sampleVisit.ip);
+    expect(insertColumns(prepare.mock.calls[0][0])).toContain('vid');
+    expect(insertColumns(prepare.mock.calls[1][0])).not.toContain('vid');
     expect(bind.mock.calls[1]).not.toContain(sampleVisit.vid);
+    expectStoredCore(prepare.mock.calls[1], bind.mock.calls[1]);
     expect(run).toHaveBeenCalledTimes(2);
+  });
+
+  it('retries without dnt, sec_gpc, and accept when those columns are missing', async () => {
+    const run = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('D1_ERROR: no such column: dnt'))
+      .mockRejectedValueOnce(new Error('table visits has no column named sec_gpc'))
+      .mockRejectedValueOnce(new Error('no such column: accept'))
+      .mockResolvedValueOnce({});
+    const bind = vi.fn().mockReturnValue({ run });
+    const prepare = vi.fn().mockReturnValue({ bind });
+
+    await persistVisit({ DB: { prepare } }, sampleVisit);
+
+    expect(prepare).toHaveBeenCalledTimes(4);
+    const lastCols = insertColumns(prepare.mock.calls[3][0]);
+    expect(lastCols).not.toContain('dnt');
+    expect(lastCols).not.toContain('sec_gpc');
+    expect(lastCols).not.toContain('accept');
+    expect(lastCols).toContain('vid');
+    expectStoredCore(prepare.mock.calls[3], bind.mock.calls[3]);
   });
 
   it('skips the vid insert on later rows after D1 reports the column is missing', async () => {
@@ -116,11 +142,11 @@ describe('persistVisit', () => {
     await persistVisit(env, sampleVisit);
 
     expect(prepare).toHaveBeenCalledTimes(3);
-    expect(prepare.mock.calls[2][0]).not.toMatch(/\bvid\b/);
-    expect(bind.mock.calls[2][1]).toBe(sampleVisit.ip);
+    expect(insertColumns(prepare.mock.calls[2][0])).not.toContain('vid');
+    expectStoredCore(prepare.mock.calls[2], bind.mock.calls[2]);
   });
 
-  it('does not swallow D1 errors other than a missing vid column', async () => {
+  it('does not swallow D1 errors other than a missing optional column', async () => {
     const run = vi.fn().mockRejectedValue(new Error('D1_ERROR: database is locked'));
     const bind = vi.fn().mockReturnValue({ run });
     const prepare = vi.fn().mockReturnValue({ bind });

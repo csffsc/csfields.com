@@ -22,7 +22,10 @@ CREATE TABLE IF NOT EXISTS visits (
   bot_score INTEGER,
   verified_bot INTEGER,
   bot_guess INTEGER NOT NULL DEFAULT 0,
-  ray TEXT
+  ray TEXT,
+  dnt TEXT,
+  sec_gpc TEXT,
+  accept TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_visits_ts ON visits(ts);
