@@ -5,6 +5,9 @@ import {
   referrerBucket,
   escapeHtml,
   hourInEastern,
+  visitorKey,
+  parseEventQuery,
+  median,
 } from './people-filter.mjs';
 
 describe('isCloudAsOrg', () => {
@@ -166,5 +169,30 @@ describe('hourInEastern', () => {
 
   it('parses SQLite UTC datetime strings', () => {
     expect(hourInEastern('2026-09-16 16:00:00')).toBe(12);
+  });
+});
+
+describe('visitorKey', () => {
+  it('prefers vid when present, otherwise IP', () => {
+    expect(visitorKey({ vid: 'v1', ip: '203.0.113.9' })).toBe('vid:v1');
+    expect(visitorKey({ vid: '', ip: '203.0.113.9' })).toBe('ip:203.0.113.9');
+    expect(visitorKey({ ip: '203.0.113.9' })).toBe('ip:203.0.113.9');
+  });
+});
+
+describe('parseEventQuery', () => {
+  it('reads beacon name and dwell ms from the query string', () => {
+    expect(parseEventQuery('n=view')).toEqual({ name: 'view', ms: null });
+    expect(parseEventQuery('n=dwell&ms=4321')).toEqual({ name: 'dwell', ms: 4321 });
+    expect(parseEventQuery('')).toEqual({ name: '', ms: null });
+  });
+});
+
+describe('median', () => {
+  it('returns null for empty and the middle value otherwise', () => {
+    expect(median([])).toBeNull();
+    expect(median([3])).toBe(3);
+    expect(median([1, 3, 2])).toBe(2);
+    expect(median([1, 2, 3, 4])).toBe(3);
   });
 });

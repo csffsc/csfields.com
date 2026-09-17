@@ -101,6 +101,15 @@ export function buildHtml({ periodLabel, runDate, data, canvasName }) {
     <tr><td>Window</td><td align="right">${escapeHtml(data.bounds?.earliest) || '—'} → ${escapeHtml(data.bounds?.latest) || '—'}</td></tr>
   </table>
 
+  <h3 style="font-weight: normal;">What they did</h3>
+  <table cellpadding="6" cellspacing="0" border="0">
+    <tr><td>Page views</td><td align="right">${data.events?.view ?? 0}</td></tr>
+    <tr><td>LinkedIn</td><td align="right">${data.events?.linkedin ?? 0}</td></tr>
+    <tr><td>mailto</td><td align="right">${data.events?.mailto ?? 0}</td></tr>
+    <tr><td>Bio rolls</td><td align="right">${data.events?.bio ?? 0}</td></tr>
+    <tr><td>Dwell</td><td align="right">${data.events?.dwell ?? 0}${data.events?.dwellMedianMs == null ? '' : ` (median ${data.events.dwellMedianMs} ms)`}</td></tr>
+  </table>
+
   <h3 style="font-weight: normal;">Country × AS org</h3>
   <table cellpadding="4" cellspacing="0" border="1" style="border-collapse: collapse; width: 100%; font-size: 14px;">
     <tr><th align="left">Country</th><th align="left">AS org</th><th align="right">People</th><th align="right">Visits</th></tr>

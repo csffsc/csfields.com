@@ -1,12 +1,12 @@
 const INSERT = `
   INSERT INTO visits (
-    ts, ip, method, url, path, query, status, ua, referer, accept_language,
+    ts, ip, vid, method, url, path, query, status, ua, referer, accept_language,
     cookie, content_type, body_len, body, country, colo, as_org, tls_version,
     bot_score, verified_bot, bot_guess, ray
   ) VALUES (
     ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10,
     ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18,
-    ?19, ?20, ?21, ?22
+    ?19, ?20, ?21, ?22, ?23
   )
 `;
 
@@ -21,6 +21,7 @@ export async function persistVisit(env, visit) {
     .bind(
       visit.ts,
       visit.ip,
+      visit.vid ?? '',
       visit.method,
       visit.url,
       visit.path,

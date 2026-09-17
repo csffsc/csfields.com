@@ -4,6 +4,7 @@ import { persistVisit } from './persist.js';
 const sampleVisit = {
   ts: '2026-08-01T12:00:00.000Z',
   ip: '203.0.113.9',
+  vid: 'visitor-1',
   method: 'GET',
   url: 'https://csfields.com/',
   path: '/',
@@ -59,6 +60,7 @@ describe('persistVisit', () => {
     expect(bind).toHaveBeenCalledWith(
       sampleVisit.ts,
       sampleVisit.ip,
+      sampleVisit.vid,
       sampleVisit.method,
       sampleVisit.url,
       sampleVisit.path,

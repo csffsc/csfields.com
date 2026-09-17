@@ -27,6 +27,32 @@ const SELF_HOSTS = new Set(['csfields.com', 'www.csfields.com']);
 /** People row shared with SQL: status 200 on `/` and not bot_guess. Cloud AS orgs are dropped in JS. */
 export const PEOPLE_SQL = `status = 200 AND path = '/' AND bot_guess = 0`;
 
+/** @param {object} row */
+export function visitorKey(row) {
+  if (row?.vid) return `vid:${row.vid}`;
+  if (row?.ip) return `ip:${row.ip}`;
+  return '';
+}
+
+/** @param {string | null | undefined} query */
+export function parseEventQuery(query) {
+  const params = new URLSearchParams(query || '');
+  const name = params.get('n') || '';
+  const msRaw = params.get('ms');
+  if (msRaw == null || msRaw === '') return { name, ms: null };
+  const ms = Number(msRaw);
+  return { name, ms: Number.isFinite(ms) ? ms : null };
+}
+
+/** @param {number[]} values */
+export function median(values) {
+  if (!values.length) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  if (sorted.length % 2) return sorted[mid];
+  return Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+}
+
 /** @param {string | null | undefined} asOrg */
 export function isCloudAsOrg(asOrg) {
   if (asOrg == null || asOrg === '') return false;

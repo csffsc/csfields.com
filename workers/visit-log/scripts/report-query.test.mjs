@@ -66,6 +66,16 @@ function assembledFixture() {
       { ip: '203.0.113.2', first_seen: '2026-09-16T16:30:00.000Z' },
       { ip: '203.0.113.3', first_seen: '2026-09-16T18:00:00.000Z' },
     ],
+    eventRows: [
+      { query: 'n=view' },
+      { query: 'n=view' },
+      { query: 'n=linkedin' },
+      { query: 'n=mailto' },
+      { query: 'n=bio' },
+      { query: 'n=dwell&ms=1200' },
+      { query: 'n=dwell&ms=4000' },
+      { query: 'n=dwell&ms=2500' },
+    ],
     totals2xx: { requests: 381, unique_ips: 207, human: 326, bot: 55 },
     byColo: [{ colo: 'EWR', n: 10 }],
     byStatus: [{ status: 404, n: 40 }],
@@ -86,12 +96,30 @@ describe('buildReportQueries', () => {
     expect(queries.prevPeopleCandidates).toContain(previousWindowClause(168));
     expect(queries.firstSeen).toContain(PEOPLE_SQL);
     expect(queries.totals2xx).toContain('status BETWEEN 200 AND 299');
+    expect(queries.eventRows).toMatch(/path = '\/e'/);
+    expect(queries.peopleCandidates).not.toMatch(/path = '\/e'/);
+  });
+
+  it('can omit vid from people SQL before the D1 migration', () => {
+    const queries = buildReportQueries(168, { includeVid: false });
+    expect(queries.peopleCandidates).not.toMatch(/\bvid\b/);
+    expect(queries.firstSeen).toMatch(/GROUP BY ip/);
+    expect(queries.eventRows).toMatch(/path = '\/e'/);
   });
 
   it('does not query unused capture columns', () => {
     const sql = Object.values(buildReportQueries(168)).join('\n');
     expect(sql).not.toMatch(/with_cookie/);
     expect(sql).not.toMatch(/capture/i);
+  });
+
+  it('excludes /e beacons from 2XX footnote, colo rollup, and probe filters', () => {
+    const queries = buildReportQueries(168);
+    expect(queries.totals2xx).toMatch(/path != '\/e'/);
+    expect(queries.byColo).toMatch(/path != '\/e'/);
+    expect(queries.probes).toMatch(/path != '\/e'/);
+    expect(queries.probeTotal).toMatch(/path != '\/e'/);
+    expect(queries.eventRows).toMatch(/path = '\/e'/);
   });
 
   it('splits appendix into redirects, favicon/robots, and real probes', () => {
@@ -165,5 +193,52 @@ describe('assembleReport', () => {
     expect(data.appendix.faviconRobots[0].path).toBe('/favicon.svg');
     expect(data.appendix.probes[0].path).toBe('/.env');
     expect(data.appendix.byColo[0].colo).toBe('EWR');
+  });
+
+  it('counts /e beacons without using them as the people headline', () => {
+    const data = assembledFixture();
+    expect(data.people.unique).toBe(2);
+    expect(data.events).toEqual({
+      view: 2,
+      linkedin: 1,
+      mailto: 1,
+      bio: 1,
+      dwell: 3,
+      dwellMedianMs: 2500,
+    });
+  });
+
+  it('treats the same vid as one person even when IPs differ', () => {
+    const data = assembleReport({
+      hours: 168,
+      bounds: { start: '2026-09-09 16:00:00', end: '2026-09-16 16:00:00' },
+      peopleCandidates: [
+        {
+          ip: '203.0.113.10',
+          vid: 'same-person',
+          as_org: 'Comcast Cable',
+          country: 'US',
+          referer: '',
+          ua: MAC_UA,
+          ts: '2026-09-16T16:00:00.000Z',
+        },
+        {
+          ip: '198.51.100.10',
+          vid: 'same-person',
+          as_org: 'Comcast Cable',
+          country: 'US',
+          referer: '',
+          ua: MAC_UA,
+          ts: '2026-09-16T17:00:00.000Z',
+        },
+      ],
+      firstSeen: [
+        { ip: '203.0.113.10', vid: 'same-person', first_seen: '2026-09-16T16:00:00.000Z' },
+      ],
+      totals2xx: { requests: 2, unique_ips: 2, human: 2, bot: 0 },
+    });
+    expect(data.people.unique).toBe(1);
+    expect(data.repeats).toEqual({ one: 0, twoToFour: 1, fivePlus: 0 });
+    expect(JSON.stringify(data)).not.toMatch(IPV4);
   });
 });
