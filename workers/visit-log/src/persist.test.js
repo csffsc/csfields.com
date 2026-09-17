@@ -84,4 +84,48 @@ describe('persistVisit', () => {
     );
     expect(run).toHaveBeenCalledOnce();
   });
+
+  it('retries without vid when D1 has no vid column and still stores the IP', async () => {
+    const run = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('D1_ERROR: no such column: vid'))
+      .mockResolvedValueOnce({});
+    const bind = vi.fn().mockReturnValue({ run });
+    const prepare = vi.fn().mockReturnValue({ bind });
+
+    await persistVisit({ DB: { prepare } }, sampleVisit);
+
+    expect(prepare).toHaveBeenCalledTimes(2);
+    expect(prepare.mock.calls[0][0]).toMatch(/\bvid\b/);
+    expect(prepare.mock.calls[1][0]).not.toMatch(/\bvid\b/);
+    expect(bind.mock.calls[1][1]).toBe(sampleVisit.ip);
+    expect(bind.mock.calls[1]).not.toContain(sampleVisit.vid);
+    expect(run).toHaveBeenCalledTimes(2);
+  });
+
+  it('skips the vid insert on later rows after D1 reports the column is missing', async () => {
+    const run = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('table visits has no column named vid'))
+      .mockResolvedValue({});
+    const bind = vi.fn().mockReturnValue({ run });
+    const prepare = vi.fn().mockReturnValue({ bind });
+    const env = { DB: { prepare } };
+
+    await persistVisit(env, sampleVisit);
+    await persistVisit(env, sampleVisit);
+
+    expect(prepare).toHaveBeenCalledTimes(3);
+    expect(prepare.mock.calls[2][0]).not.toMatch(/\bvid\b/);
+    expect(bind.mock.calls[2][1]).toBe(sampleVisit.ip);
+  });
+
+  it('does not swallow D1 errors other than a missing vid column', async () => {
+    const run = vi.fn().mockRejectedValue(new Error('D1_ERROR: database is locked'));
+    const bind = vi.fn().mockReturnValue({ run });
+    const prepare = vi.fn().mockReturnValue({ bind });
+
+    await expect(persistVisit({ DB: { prepare } }, sampleVisit)).rejects.toThrow(/locked/);
+    expect(prepare).toHaveBeenCalledOnce();
+  });
 });
