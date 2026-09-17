@@ -154,4 +154,60 @@ describe('persistVisit', () => {
     await expect(persistVisit({ DB: { prepare } }, sampleVisit)).rejects.toThrow(/locked/);
     expect(prepare).toHaveBeenCalledOnce();
   });
+
+  it('does not drop a concurrent row when another persist already recorded the missing column', async () => {
+    let phase = 'seed';
+    let dntInFlight = 0;
+    let releaseDnt;
+    const bothDntInFlight = new Promise((resolve) => {
+      releaseDnt = resolve;
+    });
+    const stored = [];
+
+    const prepare = vi.fn().mockImplementation((sql) => ({
+      bind: (...values) => ({
+        run: async () => {
+          const cols = insertColumns(sql);
+          if (phase === 'seed') {
+            if (cols.includes('vid')) throw new Error('D1_ERROR: no such column: vid');
+            return {};
+          }
+          if (cols.includes('dnt')) {
+            dntInFlight += 1;
+            if (dntInFlight === 2) releaseDnt();
+            await bothDntInFlight;
+            throw new Error('D1_ERROR: no such column: dnt');
+          }
+          stored.push({ sql, values });
+          return {};
+        },
+      }),
+    }));
+    const env = { DB: { prepare } };
+
+    await persistVisit(env, sampleVisit);
+    phase = 'concurrent';
+
+    const homepage = { ...sampleVisit, path: '/', status: 200 };
+    const beacon = { ...sampleVisit, path: '/e', query: 'n=view', status: 204, body: null };
+
+    await expect(
+      Promise.all([persistVisit(env, homepage), persistVisit(env, beacon)])
+    ).resolves.toEqual([undefined, undefined]);
+
+    expect(stored).toHaveLength(2);
+    for (const row of stored) {
+      const cols = insertColumns(row.sql);
+      expect(cols).not.toContain('dnt');
+      expect(cols).toContain('ip');
+      expect(cols).toContain('cookie');
+      expect(cols).toContain('body');
+      expect(row.values[cols.indexOf('ip')]).toBe(sampleVisit.ip);
+      expect(row.values[cols.indexOf('cookie')]).toBe(sampleVisit.cookie);
+    }
+    expect(stored.map((row) => row.values[insertColumns(row.sql).indexOf('path')]).sort()).toEqual([
+      '/',
+      '/e',
+    ]);
+  });
 });

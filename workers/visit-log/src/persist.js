@@ -82,7 +82,7 @@ export async function persistVisit(env, visit) {
       return;
     } catch (err) {
       const name = missingColumnName(err);
-      if (!OPTIONAL_COLUMNS.includes(name) || missing.has(name)) throw err;
+      if (!OPTIONAL_COLUMNS.includes(name) || !columns.includes(name)) throw err;
       missing.add(name);
       dbMissingOptional.set(db, missing);
     }
