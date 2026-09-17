@@ -279,4 +279,43 @@ describe('assembleReport', () => {
     expect(data.repeats).toEqual({ one: 0, twoToFour: 1, fivePlus: 0 });
     expect(JSON.stringify(data)).not.toMatch(IPV4);
   });
+
+  it('does not alias an IP-only visitor from an unaggregated firstSeen ip on someone else\'s vid', () => {
+    const data = assembleReport({
+      hours: 168,
+      bounds: { start: '2026-09-09 16:00:00', end: '2026-09-16 16:00:00' },
+      peopleCandidates: [
+        {
+          ip: '203.0.113.40',
+          vid: '',
+          as_org: 'Comcast Cable',
+          country: 'US',
+          referer: '',
+          ua: MAC_UA,
+          ts: '2026-09-16T16:00:00.000Z',
+        },
+        {
+          ip: '198.51.100.10',
+          vid: 'cookie-1',
+          as_org: 'Verizon',
+          country: 'US',
+          referer: '',
+          ua: MAC_UA,
+          ts: '2026-09-16T17:00:00.000Z',
+        },
+      ],
+      firstSeen: [
+        {
+          ip: '203.0.113.40',
+          vid: 'cookie-1',
+          first_seen: '2026-08-01 00:00:00',
+        },
+      ],
+      totals2xx: { requests: 2, unique_ips: 2, human: 2, bot: 0 },
+    });
+    expect(data.people.unique).toBe(2);
+    expect(data.people.returning).toBe(1);
+    expect(data.people.newCount).toBe(1);
+    expect(JSON.stringify(data)).not.toMatch(IPV4);
+  });
 });

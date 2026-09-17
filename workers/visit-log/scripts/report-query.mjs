@@ -207,7 +207,6 @@ export function assembleReport(input) {
   const ipToVid = ipToVidFromRows([
     ...(input.peopleCandidates ?? []),
     ...(input.prevPeopleCandidates ?? []),
-    ...(input.firstSeen ?? []),
   ]);
   const firstSeenMap = new Map();
   for (const row of input.firstSeen ?? []) {
