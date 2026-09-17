@@ -693,6 +693,39 @@
         'Curiosity, engineered'
       ];
 
+      function ping(name, extra) {
+        try {
+          if (!navigator.sendBeacon) return;
+          var q = '/e?n=' + encodeURIComponent(name);
+          if (extra && extra.ms != null) q += '&ms=' + encodeURIComponent(String(extra.ms));
+          navigator.sendBeacon(q);
+        } catch (err) {}
+      }
+
+      ping('view');
+
+      var started = Date.now();
+      var dwellSent = false;
+      function sendDwell() {
+        if (dwellSent) return;
+        dwellSent = true;
+        ping('dwell', { ms: Date.now() - started });
+      }
+      window.addEventListener('pagehide', sendDwell);
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'hidden') sendDwell();
+      });
+
+      var contactLinks = document.querySelectorAll('.contact a');
+      var ci;
+      for (ci = 0; ci < contactLinks.length; ci++) {
+        contactLinks[ci].addEventListener('click', function (ev) {
+          var href = (ev.currentTarget.getAttribute('href') || '').toLowerCase();
+          if (href.indexOf('mailto:') === 0) ping('mailto');
+          else if (href.indexOf('linkedin.com') !== -1) ping('linkedin');
+        });
+      }
+
       var bio = document.querySelector('.bio');
       if (!bio) return;
 
@@ -722,6 +755,7 @@
 
       function roll() {
         if (swapping) return;
+        ping('bio');
         var next;
         do {
           next = Math.floor(Math.random() * phrases.length);

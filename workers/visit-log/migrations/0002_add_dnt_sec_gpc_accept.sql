@@ -1,0 +1,3 @@
+ALTER TABLE visits ADD COLUMN dnt TEXT;
+ALTER TABLE visits ADD COLUMN sec_gpc TEXT;
+ALTER TABLE visits ADD COLUMN accept TEXT;
